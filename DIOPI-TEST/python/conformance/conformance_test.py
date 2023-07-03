@@ -108,15 +108,18 @@ def allclose(cfg: dict, tensor1: np.ndarray, tensor2: np.ndarray, sum_to_compare
 
 
 def compare_with_gen_output(output, cfg, output_reference, sum_to_compare=False):
+    op_cfg_repr = f'op name: {cfg["name"] + ("_backward" if "backward" in cfg["tag"] else "")} $ para: {cfg["para"]} $ tensor_para: {cfg["tensor_para"]} $ '
     passed = True
     if isinstance(output, Tensor):
         passed = allclose(cfg, output.numpy(), output_reference, sum_to_compare)
+        logger.debug(op_cfg_repr + f'output shape: {output_reference.shape}\n')
     elif isinstance(output, (list, tuple)):
         assert isinstance(output_reference, (list, tuple))
         assert len(output) == len(output_reference)
         for i in range(len(output)):
             if isinstance(output[i], Tensor):
                 passed &= allclose(cfg, output[i].numpy(), output_reference[i], sum_to_compare, "out" + str(i))
+                logger.debug(op_cfg_repr + f'output shape: {output_reference[i].shape}\n')
             if not record and not passed:
                 return False
     elif isinstance(output, dict):
@@ -125,6 +128,7 @@ def compare_with_gen_output(output, cfg, output_reference, sum_to_compare=False)
         for k, v in output.items():
             if isinstance(v, Tensor):
                 passed = passed and allclose(cfg, v.numpy(), output_reference[k], False, k)
+                logger.debug(op_cfg_repr + f'output shape: {output_reference[k].shape}\n')
             if not record and not passed:
                 return False
     elif isinstance(output, (int, float)):
@@ -132,6 +136,7 @@ def compare_with_gen_output(output, cfg, output_reference, sum_to_compare=False)
         output = np.array(output)
         assert output.shape == output_reference.shape, "output and output_reference should be same shape"
         passed = passed and allclose(cfg, output, output_reference, False, "scalar")
+        logger.debug(op_cfg_repr + f'output shape: {output_reference.shape}\n')
     else:
         return False
 
