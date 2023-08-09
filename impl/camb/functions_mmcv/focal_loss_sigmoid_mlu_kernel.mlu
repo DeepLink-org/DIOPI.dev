@@ -5,7 +5,6 @@
  */
 
 #include <float.h>
-
 #include "common_mlu_helper.hpp"
 
 #define PING 0
@@ -49,6 +48,13 @@ __mlu_func__ void storeOutput(T *dram_output, char *nram_output,
   }
 }
 
+#define LIGHTBLUE "\033[1;34m"
+#define DARKGREEN "\033[0;32m"
+#define LIGHTWHITE "\033[0;37m"
+#define LOG_INTERNAL(fmt, ...)                                                              \
+  __bang_printf(LIGHTBLUE "[DEBUG]" DARKGREEN "[task_%d:%s:%d]" LIGHTWHITE ":" fmt, taskId, \
+                __FUNCTION__, __LINE__, ##__VA_ARGS__)
+
 template <typename T>
 __mlu_func__ void compute(T *input, const int32_t *target, const T *weight,
                           const int32_t has_weight, const int32_t partition_nc,
@@ -57,6 +63,9 @@ __mlu_func__ void compute(T *input, const int32_t *target, const T *weight,
                           const int32_t c_start_index, const float alpha,
                           const float gamma, T *compute_a, T *compute_b,
                           T *output) {
+
+
+
   // set params
   const int32_t c_num =
       has_weight ? PAD_UP(c_seg, NFU_ALIGN_SIZE / sizeof(T)) : c_seg;
@@ -78,6 +87,13 @@ __mlu_func__ void compute(T *input, const int32_t *target, const T *weight,
       *((T *)output + index) = alpha;
     }
   }
+
+
+  // --------------- 2023.08.08 ---------------
+  LOG_INTERNAL("input: %f, %f, %f, %f \n", input[0], input[1], input[2], input[3]);
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", compute_b[0], compute_b[1], compute_b[2], compute_b[3]);
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", output[0], output[1], output[2], output[3]);
+
   if (sizeof(T) == sizeof(half)) {
     __bang_half2float((float *)compute_a, (half *)compute_b, deal_num);
     __bang_active_loghp((float *)compute_a, (float *)compute_a, deal_num);
@@ -97,16 +113,26 @@ __mlu_func__ void compute(T *input, const int32_t *target, const T *weight,
   __nramset((T *)compute_b, deal_num, (T)0);
   __bang_maxequal((T *)compute_b, (T *)compute_b, (T *)input, deal_num);
 
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", compute_b[0], compute_b[1], compute_b[2], compute_b[3]);
+
   // 2. -log(p_t) = ln(e^(-max)+ e^(-max-x) + max   if t == c_i
   //              = ln(e^(-max)+ e^(-max+x) + max   if t != c_i
   __bang_mul_const((T *)compute_a, (T *)compute_b, (T)-1.0, deal_num);
   __bang_add((T *)input, (T *)compute_a, (T *)input, deal_num);
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", compute_a[0], compute_a[1], compute_a[2], compute_a[3]);
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", input[0], input[1], input[2], input[3]);
 
   __bang_active_exphp((T *)compute_a, (T *)compute_a, deal_num);
   __bang_active_exphp((T *)input, (T *)input, deal_num);
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", compute_a[0], compute_a[1], compute_a[2], compute_a[3]);
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", input[0], input[1], input[2], input[3]);
+
   __bang_add((T *)compute_a, (T *)compute_a, (T *)input, deal_num);
   __bang_active_loghp((T *)compute_a, (T *)compute_a, deal_num);
   __bang_add((T *)input, (T *)compute_a, (T *)compute_b, deal_num);
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", compute_a[0], compute_a[1], compute_a[2], compute_a[3]);
+  LOG_INTERNAL("temp: %f, %f, %f, %f \n", input[0], input[1], input[2], input[3]);
+
 
   // 3. output = alpha_t * p_t^r * [-log(p_t)]
   __bang_mul((T *)output, (T *)output, (T *)input, deal_num);
@@ -123,6 +149,7 @@ __mlu_func__ void compute(T *input, const int32_t *target, const T *weight,
     }
   }
 }
+
 
 template <typename T>
 __mlu_func__ void startPipeline(
@@ -186,7 +213,7 @@ __mlu_func__ void startPipeline(
                   partition_nc);
     __asm__ volatile("sync;\n\t");
   }
-
+  __bang_printf("************** dkx \n");
   // diagram of PINGPONG: C0 and L1
   if (repeat > 1) {
     compute((T *)nram_input, (int32_t *)nram_target, (T *)nram_weight,
@@ -206,6 +233,7 @@ __mlu_func__ void startPipeline(
     storeOutput<T>((T *)output + i * c * n_seg,
                    nram_output + (i % 2) * pingpong_offset, load_size,
                    dram_stride, nram_stride, n_seg);
+    __bang_printf("############# place1: storeOutput<T> %f \n", *((T *)output + i * c * n_seg));
     loadInput<T>((char *)nram_input + (i % 2) * pingpong_offset,
                  (T *)(input) + (i + 2) * c * n_seg, load_size, nram_stride,
                  dram_stride, n_seg);
@@ -229,6 +257,7 @@ __mlu_func__ void startPipeline(
     storeOutput<T>((T *)output + (repeat - 2) * c * n_seg,
                    (char *)nram_output + (repeat % 2) * pingpong_offset,
                    load_size, dram_stride, nram_stride, n_seg);
+    __bang_printf("######### place2: storeOutput<T> %f \n", *((T *)output + (repeat - 2) * c * n_seg));
   }
 
   if (remain > 0) {
@@ -258,6 +287,7 @@ __mlu_func__ void startPipeline(
     storeOutput<T>((T *)output + (repeat - 1) * c * n_seg,
                    (char *)nram_output + ((repeat - 1) % 2) * pingpong_offset,
                    load_size, dram_stride, nram_stride, n_seg);
+    __bang_printf("############### place3: storeOutput<T> %f \n", *((T *)output + (repeat - 1) * c * n_seg));
   }
 
   if (remain > 0) {
@@ -274,8 +304,18 @@ __mlu_func__ void startPipeline(
     storeOutput<T>((T *)output + repeat * c * n_seg,
                    (char *)nram_output + (repeat % 2) * pingpong_offset,
                    load_size, dram_stride, nram_stride, remain);
+    __bang_printf("############## place4: storeOutput<T> %f \n", *((T *)output + repeat * c * n_seg));
   }
+  __bang_printf("place5: input[0] %f ", input[0]);
+  __bang_printf("place5: input[1] %f ", input[1]);
+  __bang_printf("place5: input[2] %f ", input[2]);
+  __bang_printf("place5: input[3] %f ", input[3]);
+  __bang_printf("place5: output[0] %f ", output[0]);
+  __bang_printf("place5: output[1] %f ", output[1]);
+  __bang_printf("place5: output[2] %f ", output[2]);
+  __bang_printf("place5: output[3] %f ", output[3]);
   __asm__ volatile("sync;\n\t");
+  
 }
 
 template <typename T>

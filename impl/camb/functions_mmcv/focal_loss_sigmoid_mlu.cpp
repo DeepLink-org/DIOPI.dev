@@ -67,7 +67,9 @@ static void policyFuncForward(cnrtDim3_t *kDim, cnrtFunctionType_t *kType, impl:
 
     kDim->x = *kType;
     kDim->y = segNum > coreNum ? clusterNum : (segNum + coreDim - 1) / coreDim;
-    kDim->z = 1;
+kDim->x=1;
+kDim->y=1;    
+kDim->z = 1;
 }
 
 // Policy Function for Backward
@@ -117,7 +119,9 @@ extern "C" DIOPI_API diopiError_t diopiSigmoidFocalLossMmcv(diopiContextHandle_t
 
     // calculate task dimension
     cnrtDim3_t kDim;
-    cnrtFunctionType_t kType = CNRT_FUNC_TYPE_UNION1;
+//    cnrtFunctionType_t kType = CNRT_FUNC_TYPE_UNION1;
+   cnrtFunctionType_t kType = CNRT_FUNC_TYPE_BLOCK;
+
     policyFuncForward(&kDim, &kType, inputTr, targetTr, weightTr);
     auto coreDim = impl::camb::getDeviceAttr(cnrtAttrMcorePerCluster);
 
@@ -131,9 +135,30 @@ extern "C" DIOPI_API diopiError_t diopiSigmoidFocalLossMmcv(diopiContextHandle_t
     //             << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
     //             << k_dim.z << ">>>";
     // launch kernel
+  std::cout << "k_type " << kType << "\n";
+  std::cout << "core_dim " << coreDim << "\n";
+  std::cout << "d_type " << dType << "\n";
+  std::cout << "input.size(0) " << inputTr.size(0) << "\n";
+  std::cout << "input.size(1) " << inputTr.size(1) << "\n";
+  std::cout << "alpha " << alpha << "\n";
+  std::cout << "gamma " << gamma << "\n";
+  std::cout << "Launch Kernel KernelFocalLossSigmoidForward<<<Union"
+              << kType / coreDim << ", " << kDim.x << ", " << kDim.y << ", "
+              << kDim.z << ">>>\n";
+  diopiPrintTensor(const_cast<diopiTensorHandle_t>(diopiTensorHandle_t(inputTr)));
+  diopiPrintTensor(const_cast<diopiTensorHandle_t>(diopiTensorHandle_t(targetTr)));
+  diopiPrintTensor(const_cast<diopiTensorHandle_t>(diopiTensorHandle_t(weightTr)));
+diopiPrintTensor(diopiTensorHandle_t(outputTr));   
     impl::camb::kernelFocalLossSigmoidForward(
         kDim, kType, queue, dType, inputTr.data(), targetTr.data(), weightTr.data(), inputTr.size(0), inputTr.size(1), alpha, gamma, outputTr.data());
-    return diopiSuccess;
+ 
+  diopiPrintTensor(const_cast<diopiTensorHandle_t>(diopiTensorHandle_t(inputTr)));
+  diopiPrintTensor(const_cast<diopiTensorHandle_t>(diopiTensorHandle_t(targetTr)));
+  diopiPrintTensor(const_cast<diopiTensorHandle_t>(diopiTensorHandle_t(weightTr)));
+diopiPrintTensor(diopiTensorHandle_t(outputTr));
+ 
+
+ return diopiSuccess;
 }
 
 void getDealNAndThresholdC(const int computeDataBytes, const int targetDataBytes, const int totalC, int *dealNPtr, int *thresholdCPtr, const bool hasWeight,

@@ -116,7 +116,8 @@ extern DIOPI_RT_API diopiError_t diopiGetTensorShape(diopiConstTensorHandle_t th
 extern DIOPI_RT_API diopiError_t diopiGetTensorStride(diopiConstTensorHandle_t th, diopiSize_t* stride);
 extern DIOPI_RT_API diopiError_t diopiGetTensorDtype(diopiConstTensorHandle_t th, diopiDtype_t* dtype);
 extern DIOPI_RT_API diopiError_t diopiGetTensorDevice(diopiConstTensorHandle_t th, diopiDevice_t* device);
-
+extern DIOPI_RT_API diopiError_t diopiPrintTensor(diopiConstTensorHandle_t th);
+extern DIOPI_RT_API diopiError_t diopiPrintTensorOptions(diopiConstTensorHandle_t th);
 extern DIOPI_RT_API diopiError_t diopiGetTensorNumel(diopiConstTensorHandle_t th, int64_t* numel);
 extern DIOPI_RT_API diopiError_t diopiGetTensorElemSize(diopiConstTensorHandle_t th, int64_t* itemsize);
 
