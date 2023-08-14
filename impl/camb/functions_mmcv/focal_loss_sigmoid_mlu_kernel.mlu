@@ -64,8 +64,8 @@ __mlu_func__ void compute(T *input, const int32_t *target, const T *weight,
                           const float gamma, T *compute_a, T *compute_b,
                           T *output) {
 
-
-
+    LOG_INTERNAL("input: %f, %f, %f, %f \n", input[0], input[1], input[2], input[3]);
+    LOG_INTERNAL("temp: %f, %f, %f, %f \n", output[0], output[1], output[2], output[3]);
   // set params
   const int32_t c_num =
       has_weight ? PAD_UP(c_seg, NFU_ALIGN_SIZE / sizeof(T)) : c_seg;
@@ -78,13 +78,17 @@ __mlu_func__ void compute(T *input, const int32_t *target, const T *weight,
   //                    = (1 - alpha) * p ^ gamma  if t != c_i
   __nramset((T *)output, deal_num, (T)(1 - alpha));
   __bang_active_sigmoid((T *)compute_b, (T *)input, deal_num);
+  LOG_INTERNAL("input place2: %f, %f, %f, %f \n", input[0], input[1], input[2], input[3]);
   for (int32_t i = 0; i < n_seg; ++i) {
     const int32_t t = *((uint32_t *)target + i);
     if (t >= c_start_index && t < c_end_index) {
       const uint32_t index = i * c_num + t - c_start_index;
       *((T *)input + index) = -1.0 * (*((T *)input + index));
+      LOG_INTERNAL("input[%d] = %f\n", index, input[index]);
       *((T *)compute_b + index) = 1.0 - (*((T *)compute_b + index)) + epsilon_f;
+      LOG_INTERNAL("compute_b[%d] = %f\n", index, input[index]);
       *((T *)output + index) = alpha;
+      LOG_INTERNAL("output[%d] = %f\n", index, input[index]);
     }
   }
 

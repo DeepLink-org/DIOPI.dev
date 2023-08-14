@@ -14,6 +14,7 @@
 #include "../cnnl_helper.hpp"
 #include "../diopi_helper.hpp"
 #include "../mlu_helper.hpp"
+#include "../common/common.hpp"
 
 namespace impl {
 
@@ -110,6 +111,7 @@ extern "C" DIOPI_API diopiError_t diopiSigmoidFocalLossMmcv(diopiContextHandle_t
     auto outputTr = impl::camb::DiopiTensor(output);
     auto inputTr = impl::camb::DiopiTensor(input);
     auto targetTr = impl::camb::DiopiTensor(target);
+
     auto weightTr = impl::camb::DiopiTensor(weight);
 
     // return if zero-element
@@ -130,6 +132,12 @@ extern "C" DIOPI_API diopiError_t diopiSigmoidFocalLossMmcv(diopiContextHandle_t
 
     // get dtype of input
     cnrtDataType_t dType = impl::camb::dtype2CnrtDtype(inputTr.dtype());
+
+    auto target32Tensor = targetTr;
+    if (targetTr.dtype() == diopi_dtype_int64 || targetTr.dtype() == diopi_dtype_uint64) {
+        DIOPI_CALL(impl::camb::dataTypeCast(ctx, target32Tensor, diopi_dtype_int32));
+        targetTr = target32Tensor;
+    }
 
     // CNLOG(INFO) << "Launch Kernel KernelFocalLossSigmoidForward<<<Union"
     //             << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
@@ -290,6 +298,11 @@ extern "C" DIOPI_API diopiError_t diopiSigmoidFocalLossBackwardMmcv(diopiContext
     //             << k_type / core_dim << ", " << k_dim.x << ", " << k_dim.y << ", "
     //             << k_dim.z << ">>>";
 
+    auto target32Tensor = targetTr;
+    if (targetTr.dtype() == diopi_dtype_int64 || targetTr.dtype() == diopi_dtype_uint64) {
+        DIOPI_CALL(impl::camb::dataTypeCast(ctx, target32Tensor, diopi_dtype_int32));
+        targetTr = target32Tensor;
+    }
     // launch kernel
     impl::camb::kernelFocalLossSigmoidBackward(
         kDim, kType, queue, dType, inputTr.data(), targetTr.data(), weightTr.data(), gamma, alpha, dimN, dealN, dimC, outputTr.data());
