@@ -1142,6 +1142,9 @@ DIOPI_API diopiError_t diopiPrroiPoolCoorBackwardMmcv(diopiContextHandle_t ctx, 
                                                       diopiConstTensorHandle_t grad_output, diopiConstTensorHandle_t input, diopiConstTensorHandle_t rois,
                                                       int64_t pooled_height, int64_t pooled_width, float spatial_scale);
 
+DIOPI_API diopiError_t diopiRotaryEmbedding(diopiContextHandle_t ctx, diopiTensorHandle_t out1, diopiTensorHandle_t out2, diopiConstTensorHandle_t x1,
+                                            diopiConstTensorHandle_t x2, diopiConstTensorHandle_t cos, diopiConstTensorHandle_t sin, const bool conj);
+
 #if defined(__cplusplus)
 }
 #endif  // __cplusplus

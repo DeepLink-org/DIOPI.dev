@@ -18,6 +18,8 @@ using namespace at;
 
 Tensor NMSCUDAKernelLauncher(Tensor boxes, Tensor scores, float iou_threshold, int offset);
 
+void apply_rotary_cuda(const Tensor x1, const Tensor x2, const Tensor cos, const Tensor sin, Tensor out1, Tensor out2, const bool conj);
+
 void ROIAlignForwardCUDAKernelLauncher(Tensor input, Tensor rois, Tensor output, Tensor argmax_y, Tensor argmax_x, int aligned_height, int aligned_width,
                                        float spatial_scale, int sampling_ratio, int pool_mode, bool aligned);
 
