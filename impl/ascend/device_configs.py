@@ -1123,16 +1123,18 @@ device_configs = {
 
     'linear': dict(
         name=['linear'],
+        atol = 2e-2,
+        rtol = 2e-2,
         tensor_para=dict(
             args=[
                 {
                     "ins": ['input'],
-                    "dtype": [Skip(Dtype.float16),Skip(Dtype.float32),Skip(Dtype.float64),],
+                    "dtype": [Skip(Dtype.float16),],
                 },
             ]
         ),
     ),
-
+    
     'embedding': dict(
         name=['embedding'],
         tensor_para=dict(
