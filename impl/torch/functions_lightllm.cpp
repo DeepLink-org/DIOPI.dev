@@ -4,7 +4,6 @@
  * @copyright  (c) 2023, DeepLink.
  */
 #include <cuda_runtime_api.h>
-#include <cudnn.h>
 #include <diopi/functions.h>
 #include <diopi/functions_ext.h>
 #include <torch/nn.h>
