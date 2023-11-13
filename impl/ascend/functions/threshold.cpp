@@ -13,9 +13,11 @@ diopiError_t diopiThreshold(diopiContextHandle_t ctx, diopiTensorHandle_t out, d
                             const diopiScalar_t* value) {
     diopiTensorHandle_t thresholdTensor;
     diopiTensorHandle_t valueTensor;
+    makeTensorLike(ctx,&valueTensor,input);
+    makeTensorLike(ctx,&thresholdTensor,input);
     makeTensorFromScalar(ctx, threshold, &thresholdTensor);
     makeTensorFromScalar(ctx, value, &valueTensor);
-    AclOpRunner<3, 1>("ThresholdV2", ctx).addInput(input).addConstInput(thresholdTensor).addConstInput(valueTensor).addOutput(out).run();
+    AclOpRunner<1, 1>("ThresholdV2", ctx).addInput(input).setAttr("threshold",threshold->fval).setAttr("value",value->ival).addOutput(out).run();
     return diopiSuccess;
 }
 
