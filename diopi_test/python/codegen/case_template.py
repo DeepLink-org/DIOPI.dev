@@ -56,9 +56,9 @@ from conformance.diopi_manual_functions import ManualTest
     )
 
     # marks
-    test_function_case_dtype_marks = CodeTemplate(
+    test_function_case_marks = CodeTemplate(
         r"""
-@pytest.mark.${dtype}
+@pytest.mark.${mark}
 """
     )
 
@@ -66,6 +66,7 @@ from conformance.diopi_manual_functions import ManualTest
     test_function_templ = CodeTemplate(
         r"""
 ${test_dtype_marks}
+${test_priority_mark}
 def test_${func_case_name}(self):
     ${forward}
     ${backward}
