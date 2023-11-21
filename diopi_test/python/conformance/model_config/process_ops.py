@@ -2,6 +2,10 @@ import pandas as pd
 import ast
 import re
 import argparse
+from collections import defaultdict
+from itertools import chain
+import random
+from functools import partial
 
 # param in op_tensor_param must be a tensor, even if it is not defined
 op_tensor_param = {
@@ -20,11 +24,31 @@ op_skip_param = {
     'diopiSoftmax': ['half_to_float'],
     'diopiNLLLoss': ['total_weight'],
     'diopiNormalInp': ['generator'],
+    'diopiUniformInp': ['generator'],
+    'diopiIndexPut': ['unsafe'],
+    'diopiMax': ['max_indices', 'max'],
+    'diopiMin': ['min_indices', 'min'],
+    'diopiSort': ['indices', 'values'],
+    'diopiTopk': ['indices', 'values'],
+    'diopiUnique': ['indices', 'counts'],
+    'diopiUpsampleNearest': ['scales_h', 'scales_w'],
+    'diopiUpsampleLinear': ['scales_h', 'scales_w'],
 }
-# param name translation
+# param name translation(all of the ops)
 param_name_translation = {
     "self": "input",
-    "indices": "return_indices",
+    "from": "start",
+    "to": "end",
+    "output_size": "size",
+}
+# op param name translation(specific ops)
+op_param_name_translation = {
+    'diopiIndexPut': {
+        "indices": "indices1",
+    },
+    'diopiMaxPool2dWithIndices': {
+        "indices": "return_indices",
+    },
 }
 
 
@@ -54,7 +78,10 @@ def extract_requires_grad(args_str):
 
 
 def extract_args(args_str: str, op_name: str) -> dict:
-    args_str = args_str.replace('undefined', 'None')
+    args_str = re.sub(r"'undefined'|undefined", "None", args_str)
+    # XXX log里的gelu算子，approximate参数为none字符串，解析失败
+    # 目前是先改为None，转化为测例后再手动改
+    args_str = re.sub(r"none", "None", args_str)
     args_list = ast.literal_eval(args_str)
     # filter out, out1, out2, output... but maintain output_size
     filtered_args = [arg for arg in args_list if not re.search(r'^(out(?=\d|\:)|^output:\[)', arg)]
@@ -62,9 +89,11 @@ def extract_args(args_str: str, op_name: str) -> dict:
     result = {}
     for item in filtered_args:
         key, values_str = item.split(':', 1)
-        key = param_name_translation.get(key, key)
         if key in op_skip_param.get(op_name, []):
             continue
+        # first scan for normal translation, then fetch the specific one
+        key = param_name_translation.get(key, key)
+        key = op_param_name_translation.get(op_name, {}).get(key, key)
 
         sizes = extract_sizes(values_str)
         dtypes = extract_dtype(values_str)
@@ -104,12 +133,17 @@ def extract_args(args_str: str, op_name: str) -> dict:
 
 
 def aggregate_rows(group: pd.core.frame.DataFrame) -> str:
-    aggregated_params_dict = {key: {'shape': [], 'dtype': [], 'requires_grad': []}
-                              for key in group['extracted_args'].iloc[0].keys() if isinstance(group['extracted_args'].iloc[0][key], dict)}
+    # group = group.iloc[0:10]   # debug usage
+    func_name = group['diopi_fun'].iloc[0]
+    aggregated_params_dict = defaultdict(list)
 
     for _, row in group.iterrows():
         row_shapes = []  # To collect shapes for this specific row
 
+        # specific operations towards `upsample`
+        if 'Upsample' in func_name:
+            aggregated_params_dict['mode'].append(
+                func_name.split("Upsample", 1)[1].lower())
         for key, value in row['extracted_args'].items():
             if isinstance(value, dict) and 'shape' in value and 'dtype' in value:
                 # tensor param
@@ -118,22 +152,83 @@ def aggregate_rows(group: pd.core.frame.DataFrame) -> str:
                 if key == 'tensors':
                     row_shapes.append(value['shape'])
                 else:
+                    # TODO: update DIOPI to support random length of indices
+                    # Now we just fetch the first one
                     aggregated_params_dict[key]['shape'].extend(
-                        value['shape'] if value['shape'] is not None else [None])
+                        value['shape'][:1] if value['shape'] is not None else [None])
                 aggregated_params_dict[key]['dtype'].extend(value['dtype'] if value['dtype'] is not None else [None])
                 aggregated_params_dict[key]['requires_grad'].extend(
-                    value['requires_grad'] if value['requires_grad'] is not None else [None])
+                    value['requires_grad'] if value.get('requires_grad') is not None else [None])
             else:
+                # XXX log存在某个张量参数输入None的情况
+                if isinstance(aggregated_params_dict[key], dict) and value is None:
+                    aggregated_params_dict[key]['shape'].append(None)
+                    aggregated_params_dict[key]['dtype'].append(aggregated_params_dict[key]['dtype'][-1])
+                    aggregated_params_dict[key]['requires_grad'].append(aggregated_params_dict[key]['requires_grad'][-1])
+                # XXX log存在某个张量参数只有shape的情况
+                elif isinstance(aggregated_params_dict[key], dict) and 'shape' in value:
+                    print(func_name, key, aggregated_params_dict[key], value)
                 # normal param
-                if key not in aggregated_params_dict:
-                    aggregated_params_dict[key] = []
-                aggregated_params_dict[key].append(value)
+                else:
+                    aggregated_params_dict[key].append(value)
 
         # Append the aggregated shapes for 'tensors' key
         if row_shapes and 'tensors' in aggregated_params_dict:
             aggregated_params_dict['tensors']['shape'].extend(row_shapes)
+    # 去除参数过多的算子
+    drop_numerous_args_all_ops(group['diopi_fun'].iloc[0], aggregated_params_dict)
+    return f"'{func_name}': {dict(aggregated_params_dict)}"
 
-    return f"'{group['diopi_fun'].iloc[0]}': {aggregated_params_dict}"
+
+def drop_numerous_args_all_ops(func_name, params_dict, num=10):
+    for k in params_dict:
+        if isinstance(params_dict[k], dict) and params_dict[k].get('shape'):
+            expect_func_args_map = {func_name: k}
+            if func_name not in  ['diopiCat', 'diopiStack']:
+                args_length = drop_numerous_args(func_name, params_dict, expect_func_args_map, num)
+                if args_length > 20:
+                    args_length = drop_numerous_args(func_name, params_dict, expect_func_args_map, 20, distinct='dim')
+                if args_length >= 20:
+                    args_length = drop_numerous_args(func_name, params_dict, expect_func_args_map, 8, distinct='dim')
+            else:
+                drop_numerous_args(func_name, params_dict, expect_func_args_map, 2, distinct='dim')
+            break
+
+def drop_numerous_args(func_name, params_dict, expect_func_args_map, k=10, distinct='shape'):
+    # expect_func_args_map：指定需要去重的算子与参数。e.g. {'diopiAdd': 'input'}
+    # distinct：shape——按照参数shape去重，dim——按照参数shape维度去重
+    args_length = len(params_dict[expect_func_args_map[func_name]]['shape'])
+    if func_name in expect_func_args_map.keys():
+        print(func_name, params_dict.keys(), args_length)
+        index_map = {}
+        for index, shape in enumerate(params_dict[expect_func_args_map[func_name]]['shape']):
+            if distinct == 'shape':
+                if shape not in index_map:
+                    index_map[shape] = []
+                index_map[shape].append(index)
+            elif distinct == 'dim':
+                dim = len(shape)
+                if dim not in index_map:
+                    index_map[dim] = []
+                index_map[dim].append(index)
+        index_list = list(index_map.values())
+        for i, index in enumerate(index_list):
+            if len(index) > k:
+                index_list[i] = random.sample(index, k=k)
+        index = list(chain(*index_list))
+        for k in params_dict:
+            if isinstance(params_dict[k], dict):
+                for k2 in params_dict[k]:
+                    print(k, k2)
+                    params_dict[k][k2] = [params_dict[k][k2][i] for i in index]
+            else:
+                if len(params_dict[k]) <= max(index):
+                    for _ in range(max(index) - len(params_dict[k]) + 1):
+                        params_dict[k].append(params_dict[k][-1])
+                params_dict[k] = [params_dict[k][i] for i in index]
+        args_length = len(params_dict[expect_func_args_map[func_name]]['shape'])
+        print(func_name, params_dict.keys(), args_length)
+    return args_length
 
 
 if __name__ == '__main__':
@@ -145,6 +240,7 @@ if __name__ == '__main__':
     df = pd.read_csv(args.input, index_col=None)
 
     df = df[~df['diopi_fun'].str.contains('Backward', case=False)]
+    df = df[~(df['args'] == '[]')].drop_duplicates()
     df['extracted_args'] = df.apply(lambda row: extract_args(row['args'], row['diopi_fun']), axis=1)
 
     res = df.groupby('diopi_fun').apply(aggregate_rows).tolist()

@@ -3,12 +3,19 @@ import os
 import re
 import ast
 import argparse
+import logging
+log_format = '%(asctime)s - %(levelname)s: %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format, datefmt='%Y-%m-%d %H:%M:%S')
 
 name_translation = {
     "diopiConvolution2d": "conv2d",
     "diopiCrossEntropyLoss": "cross_entropy",
     "diopiMaxPool2dWithIndices": "max_pool2d",
-    "diopiFill": 'fill_',
+    "diopiFill": "fill_",
+    "diopiMaxAll": "max",
+    "diopiMinAll": "min",
+    "diopiUpsampleNearest": "interpolate",
+    "diopiUpsampleLinear": "interpolate",
 }
 param_type_translation = {
     "training": bool,
@@ -16,12 +23,39 @@ param_type_translation = {
     "keepdim": bool,
     "reduction": lambda x: "none" if x == 0 else ("mean" if x == 1 else "sum"),
     "dim": lambda x: None if isinstance(x, list) and len(x) == 0 else x,
+    "accumulate": bool,
+    "descending": bool,
+    "largest": bool,
+    "sorted": bool,
+    "return_inverse": bool,
+    "return_counts": bool,
 }
 func_interface = {
-    'torch': ['add', 'sub', 'mul', 'div', 'eq', 'ne', 'le',
-              'lt', 'gt', 'ge', 'logical_and', 'logical_or', 'cat', 'stack', 'flip', 'mean', 'fill', 'sum'],
+    'torch': ['gather', 'unique', 'transpose', 'tanh', 'pow', 'cumsum',
+              'polar', 'max', 'floor', 'add', 'minimum', 'masked_fill',
+              'exp', 'norm', 'clamp', 'cat', 'asin', 'tril', 'lerp', 'topk',
+              'sqrt', 'reciprocal', 'index_select', 'baddbmm', 'remainder',
+              'where', 'argmax', 'group_norm', 'prod', 'multinomial', 'conv3d',
+              'abs', 'triu', 'cos', 'rsqrt', 'sum', 'scatter', 'logical_or',
+              'bitwise_and', 'sub', 'logical_not', 'sort', 'amax', 'flip',
+              'select', 'bitwise_not', 'all', 'clamp_min', 'mm', 'isnan',
+              'gt', 'bmm', 'stack', 'min', 'erfinv', 'addmm', 'ceil',
+              'clamp_max', 'cdist', 'addcdiv', 'mean', 'sin', 'split',
+              'log', 'masked_scatter', 'neg', 'maximum', 'masked_select',
+              'bitwise_or', 'sigmoid', 'erf', 'matmul', 'addcmul', 'std',
+              'arange', 'log2', 'sign', 'eq', 'nonzero', 'triangular_solve',
+              'ne', 'mul', 'linspace', 'index_fill', 'atan', 'le', 'sgn',
+              'logical_and', 'permute', 'div', 'log10', 'roll', 'ge', 'lt', 'any'],
     'torch.nn.functional': ['conv2d', 'batch_norm'],
-    'torch.Tensor': ['normal_', 'fill_']
+    'torch.Tensor': ['fill_', 'repeat', 'unfold', 'copy_', 'expand'],
+    'CustomizedTest': ['linalgqr', 'adadelta', 'cast_np', 'batch_norm_elemt',
+                       'clip_grad_norm_', 'batch_norm_gather_stats_with_counts',
+                       'im2col', 'index', 'ctc_loss', 'batch_norm_backward_reduce',
+                       'rmsprop', 'slice_op', 'batch_norm_stats', 'adamw',
+                       'batch_norm_backward_elemt', 'adam', 'sgd', 'col2im',
+                       'index_put', 'meshgrid'],
+    'torch.linalg': ['cholesky_ex'],
+    'torchvision.ops': ['sigmoid_focal_loss', 'nms', 'roi_align']
 }
 no_output_ref = ['randperm', 'uniform', 'dropout', 'dropout2d', 'normal', 'multinomial', 'normal_']
 saved_args = {"sigmoid": "0", 'softmax': '0', 'log_softmax': '0', 'tanh': '0', 'cholesky_ex': '0', 'cdist': '0',
@@ -30,7 +64,8 @@ saved_args = {"sigmoid": "0", 'softmax': '0', 'log_softmax': '0', 'tanh': '0', '
 requires_backward = {'cholesky_ex': '0', 'max_pool2d': '0'}
 # For some ops that doesn't have diopiBackward function, skip requires_grad
 skip_backward_ops = ['add', 'sub', 'mul', 'div', 'eq', 'ne', 'le',
-                     'lt', 'gt', 'ge', 'logical_and', 'logical_or', 'cat', 'stack', 'flip', 'mean', 'fill_', 'sum', 'relu', 'normal_']
+                     'lt', 'gt', 'ge', 'logical_and', 'logical_or', 'cat', 'stack', 'flip', 'mean', 'fill_', 'sum', 'relu', 'normal_', 'topk', 'abs', 'neg', 'sgn',
+                     'uniform']
 # For some ops that doesn't need to use is_inplace
 skip_inplace_ops = ['normal_', 'fill_']
 
@@ -76,6 +111,8 @@ gen_func = {
     'log2:input': 'Genfunc.positive',
     'log10:input': 'Genfunc.positive'
 }
+
+warning_list = ['index_put', 'index']
 
 
 def convert_op_name(op):
@@ -128,6 +165,9 @@ def gen_config_code(contents: dict, file_name: str) -> None:
                 names.update({name: 1})
             config.append(key_indent + 'name=["' + name + '"],\n')
 
+            if name in warning_list:
+                logging.warning(f"Need to check manually for `{name}` due to randomness or current limitation.")
+                # continue    # debug usage
             if name in atol_rtol:
                 for k, v in atol_rtol[name].items():
                     config.append(key_indent + f'{k}={v:.0e},\n')
@@ -152,7 +192,8 @@ def gen_config_code(contents: dict, file_name: str) -> None:
                         requires_grad = True in set(v["requires_grad"])
                         tensor_para.append(tensor_indent + '"requires_grad":[' + str(requires_grad) + '],\n')
                     tensor_para.append(tensor_indent + '"shape": ' + str(v["shape"]) + ",\n")
-                    dtype = v['dtype'][0]
+                    unique_dtypes = set(v['dtype']) - {None}
+                    dtype = next(iter(unique_dtypes)) if unique_dtypes else None
                     if dtype is not None:
                         # TODO: currently we only support generate one dtype (update diopi)
                         assert dtype in dtype_mappings, "unexpected input!"
@@ -185,17 +226,49 @@ def gen_config_code(contents: dict, file_name: str) -> None:
                 f.write(row)
         f.write("}\n")
 
+def generate_model_list(model_name, contents):
+    op_names = []
+    for name in contents.keys():
+        name = convert_op_name(name)
+        if name.endswith('_') and name not in skip_inplace_ops:
+            name = name.rstrip('_')
+        if name not in op_names:
+            op_names.append(name)
+    return model_name, op_names
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Generate configuration code.")
+    config_dict = {}
+    model_map = {
+        'cv_configs': [
+            'resnet50',
+            'resnet101',
+            'mobilenet_v2',
+            'mobilenet_v3',
+            'seresnet50',
+            'shufflenet_v2',
+            'vgg16',
+            'efficientnet'
+            ],
+        'det_configs': [
+            'faster_rcnn',
+        ],
+        'other_configs': [
+            'tsn',
+            'crnn'
+        ]
+    }
+    model_op_map = {}
+    for model_type, model_list in model_map.items():
+        for model in model_list:
+            with open(f'ops/{model_type}/{model}_ops.py') as f:
+                content = ast.literal_eval(f.read())
+                gen_config_code(content, f'{model_type}/{model}_config.py')
+                model_name, op_names = generate_model_list(model, content)
+                model_op_map[model_name] = op_names
 
-    parser.add_argument('--input_file', '-i', type=str, default='cv_configs/resnet50_ops.py',
-                        help='Input filename containing the operations')
-
-    parser.add_argument('--output_file', '-o', type=str, default='cv_configs/resnet50_config.py',
-                        help='Output filename for the generated configuration')
-
-    args = parser.parse_args()
-
-    with open(args.input_file) as f:
-        gen_config_code(ast.literal_eval(f.read()), args.output_file)
+    with open(f'../model_list.py', 'w') as f:
+        f.write("model_list = [" + ', '.join(map(lambda x: f"'{x}'", model_op_map.keys())) + ']\n')
+        f.write("model_op_list = {\n")
+        for k, v in model_op_map.items():
+            f.write(f"    '{k}': [" + ', '.join(map(lambda x: f"'{x}'", v)) + '],\n')
+        f.write("}\n")
