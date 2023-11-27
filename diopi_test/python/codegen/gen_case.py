@@ -6,7 +6,6 @@ import pickle
 import numpy as np
 from collections import defaultdict
 
-from torch import is_floating_point
 from codegen.filemanager import FileManager
 from codegen.case_template import CaseTemplate
 from conformance.db_operation import db_conn
