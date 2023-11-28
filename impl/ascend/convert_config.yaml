@@ -234,3 +234,11 @@
 - diopiLayerNormBackward:
     dtype: (float64)->float32
     layout: NCHW
+
+- diopiMaxPool2d:
+    dtype: (float32,float64)->float16
+    layout: NCHW
+
+- diopiMaxPool2dWithIndices:
+    dtype: (float32,float64)->float16
+    layout: NCHW
