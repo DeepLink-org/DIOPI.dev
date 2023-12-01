@@ -12,6 +12,7 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
+#include <unordered_map>
 
 std::vector<int64_t> calcStrides(diopiSize_t size, diopiMemoryFormat_t format = diopiMemoryFormat_t::Contiguous);
 
@@ -41,28 +42,45 @@ public:
 
 private:
     bool enableTiming_;
+    std::unordered_map<std::string, double> elapsedTable;
     std::ofstream stream_;
+};
+
+class TimeElapsedAccumulator {
+public:
+    double  elapsedTime;
+    const char* name;
+    TimeElapsedAccumulator(const char* name): elapsedTime(0), name(name) {};   
 };
 
 class TimeElapsed {
 public:
-    TimeElapsed(const char *opName) : opName_(opName) {
+    TimeElapsed(const char *opName, TimeElapsedAccumulator* acc=nullptr) : opName_(opName), accumulator(acc) {
         if (timeElapsedRecord.isEnableTiming()) {
             start_ = std::chrono::steady_clock::now();
         }
     }
-    ~TimeElapsed() {
-        if (timeElapsedRecord.isEnableTiming()) {
-            auto end = std::chrono::steady_clock::now();
-            std::chrono::duration<double, std::milli> elapsed = end - start_;  // ms
-            double elapsedTime = elapsed.count();
-            timeElapsedRecord.getOStream() << opName_ << ": " << elapsedTime << "ms" << std::endl;
+
+    void tick() {
+        if (timeElapsedRecord.isEnableTiming()){
+            auto now_ = std::chrono::steady_clock::now();
+            if (accumulator != nullptr){
+                elapsed = now_ - start_;
+                accumulator->elapsedTime += elapsed.count();
+                accumulator = nullptr;
+            }  
         }
+    }
+
+    ~TimeElapsed() {
+        tick();    
     }
 
 private:
     const char *opName_;
+    TimeElapsedAccumulator* accumulator;   
     std::chrono::time_point<std::chrono::steady_clock> start_;
+    std::chrono::duration<double, std::milli> elapsed;
     static TimeElapsedRecord timeElapsedRecord;
 };
 
