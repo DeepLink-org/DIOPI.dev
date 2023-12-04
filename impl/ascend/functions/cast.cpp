@@ -32,11 +32,11 @@ diopiError_t diopiCastDtype(diopiContextHandle_t ctx, diopiTensorHandle_t out, d
                 .run();
         } else {
         printf("===== bbb =====\n");
-            auto runner = AclOpRunner<1, 1>("Cast", ctx)
+            AclOpRunner<1, 1>("Cast", ctx)
                 .addInput(inputAt.data(), inputAt.getAclMemBufferSize(), inputAt.getAclMemShape(), inputAt.getAclDataFormat(), inputAt.dtype())
                 .addOutput(const_cast<void *>(outAt.data()), outAt.getAclMemBufferSize(), outAt.getAclMemShape(), outAt.getAclDataFormat(), outAt.dtype())
-                .setAttr<int32_t>("dst_type", outAt.getAclDataType());
-            runner.run();
+                .setAttr<int32_t>("dst_type", outAt.getAclDataType())
+                .run();
         printf("===== ccc =====\n");
         }
     } else {
