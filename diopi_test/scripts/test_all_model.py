@@ -11,7 +11,6 @@ from python.conformance.model_list import model_list    # noqa
 
 os.chdir(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'python'))
 
-
 logger = logging.getLogger('Conformance')
 logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
@@ -20,7 +19,7 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 
-def execute_commands(commands):
+def execute_commands(commands, single_process):
     def execute_command(command):
         logger.info(command)
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -29,20 +28,24 @@ def execute_commands(commands):
         process.wait()
         return process.returncode
 
-    processes = []
+    if single_process:
+        for cmd in commands:
+            execute_command(cmd)
+    else:
+        processes = []
 
-    for i, cmd in enumerate(commands):
-        process = multiprocessing.Process(target=execute_command, args=(cmd,))
-        processes.append(process)
-        process.start()
-        if i % 5 == 0:
-            time.sleep(30)
+        for i, cmd in enumerate(commands):
+            process = multiprocessing.Process(target=execute_command, args=(cmd,))
+            processes.append(process)
+            process.start()
+            if i % 5 == 0:
+                time.sleep(30)
 
-    for process in processes:
-        process.join()
+        for process in processes:
+            process.join()
 
 
-def gen_data(partition, device_type, device_num, use_db, use_slurm):
+def gen_data(partition, device_type, device_num, use_db, use_slurm, single_process):
     commands = []
     for model in model_list:
         cmd = ''
@@ -54,10 +57,10 @@ def gen_data(partition, device_type, device_num, use_db, use_slurm):
             cmd += f' --use_db --db_path {db_path}'
         commands.append(cmd)
 
-    execute_commands(commands)
+    execute_commands(commands, single_process)
 
 
-def gen_case(partition, use_db, use_slurm, impl_folder):
+def gen_case(partition, use_db, use_slurm, impl_folder, single_process):
     commands = []
     for model in model_list:
         cmd = ''
@@ -71,10 +74,10 @@ def gen_case(partition, use_db, use_slurm, impl_folder):
             cmd += f' --use_db --db_path {db_path}'
         commands.append(cmd)
 
-    execute_commands(commands)
+    execute_commands(commands, single_process)
 
 
-def run_test(partition, device_type, device_num, use_db, pytest_args, use_slurm):
+def run_test(partition, device_type, device_num, use_db, pytest_args, use_slurm, single_process):
     commands = []
     for model in model_list:
         cmd = ''
@@ -89,7 +92,7 @@ def run_test(partition, device_type, device_num, use_db, pytest_args, use_slurm)
         cmd += f' 2>&1 | tee logs/{model}.log'
         commands.append(cmd)
 
-    execute_commands(commands)
+    execute_commands(commands, single_process)
 
 
 if __name__ == '__main__':
@@ -125,11 +128,15 @@ if __name__ == '__main__':
 
     parser.add_argument("--pytest_args", type=str, help="pytest args", default='')
 
+    parser.add_argument(
+        "--single_process", action="store_true", help="run processes sequentially"
+    )
+
     args = parser.parse_args()
 
     if args.mode == 'gen_data':
-        gen_data(args.partition, args.device_type, args.device_num, args.use_db, args.use_slurm)
+        gen_data(args.partition, args.device_type, args.device_num, args.use_db, args.use_slurm, args.single_process)
     elif args.mode == 'gen_case':
-        gen_case(args.partition, args.use_db, args.use_slurm, args.impl_folder)
+        gen_case(args.partition, args.use_db, args.use_slurm, args.impl_folder, args.single_process)
     elif args.mode == 'run_test':
-        run_test(args.partition, args.device_type, args.device_num, args.use_db, args.pytest_args, args.use_slurm)
+        run_test(args.partition, args.device_type, args.device_num, args.use_db, args.pytest_args, args.use_slurm, args.single_process)
