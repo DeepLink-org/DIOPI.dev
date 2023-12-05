@@ -10,9 +10,11 @@ class OpTemplate(object):
  */
 
 #include "convert.hpp"
+#include "adaptors_enum.hpp"
 #include "impl_functions.hpp"
 
 // NOLINTBEGIN
+
 ${cast_strategy}
 
 ${adaptors}
@@ -23,17 +25,17 @@ ${adaptors}
 
     adaptor_template = CodeTemplate("""\
 extern "C" diopiError_t diopi${op_name}(${attrs}) {
-    TimeElapsed adaptorTimeElapsed("${op_name}_adaptor");
+    TimeElapsed adaptorTimeElapsed("${op_name}_adaptor",&(getTimeElapsedRecorder().accumulators[impl::ENUM_${op_name_upper}_ADAPTOR]));
     ${new_input}
     {
-        TimeElapsed castInputTimeElapsed("${op_name}_cast_input");
+        TimeElapsed castInputTimeElapsed("${op_name}_cast_input",&(getTimeElapsedRecorder().accumulators[impl::ENUM_${op_name_upper}_CAST_INPUT]));
         ${cast_input}
     }
 
     ${cast_output}
     diopiError_t ret;
     {
-        TimeElapsed opTimeElapsed("${op_name}");
+        TimeElapsed opTimeElapsed("${op_name}",&(getTimeElapsedRecorder().accumulators[impl::ENUM_${op_name_upper}]));
         ret = ::impl::${device}::${call_func};
     }
     return ret;
@@ -86,4 +88,41 @@ ${composite_funcs_decl}
 // NOLINTEND
 #endif  // IMPL_FUNCTIONS_HPP_
 
+""")
+    enum_declaration_template = CodeTemplate("""\
+
+#ifndef ENUM_ADAPTOR_HPP_
+#define ENUM_ADAPTOR_HPP_
+
+// NOLINTBEGIN
+namespace impl {
+
+enum ENUM_ADAPTORS_TIMERS{
+  ${enum_declaration,}
+  ENUM_ADAPTORS_TOTAL
+};
+
+const char* adaptorEnumToName(unsigned idx);
+
+}  // namespace impl
+
+// NOLINTEND
+#endif  // ENUM_ADAPTOR_HPP_
+""")
+    adaptor_timer_template = CodeTemplate("""\
+#include "adaptors_enum.hpp"
+#include <array>
+
+// NOLINTBEGIN
+namespace impl {
+    
+    const char* adaptorEnumToName(unsigned idx)
+    { 
+        static std::array<const char*, ENUM_ADAPTORS_TOTAL> timerNames = { \
+        ${enum_names}\
+        };
+        return timerNames[idx];
+    } 
+}  // namespace impl
+// NOLINTEND
 """)

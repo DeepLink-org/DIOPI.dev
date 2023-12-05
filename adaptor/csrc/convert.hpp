@@ -12,7 +12,10 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
+#include <array>
 #include <unordered_map>
+
+#include "adaptors_enum.hpp"
 
 std::vector<int64_t> calcStrides(diopiSize_t size, diopiMemoryFormat_t format = diopiMemoryFormat_t::Contiguous);
 
@@ -28,48 +31,27 @@ std::vector<diopiMemoryFormat_t> setIntersection(std::vector<diopiMemoryFormat_t
 
 std::vector<diopiMemoryFormat_t> obtainTargetMemoryFormats(size_t shapeLen, std::vector<diopiMemoryFormat_t> supportMemoryFormats);
 
-class TimeElapsedRecord {
+struct TimeElapsedAccumulator {
 public:
-    TimeElapsedRecord(const char *fileName) : enableTiming_(false) {
-        const char *enableEnvVar = getenv("DIOPI_ENABLE_TIMING");
-        if (enableEnvVar && strcmp(enableEnvVar, "OFF") != 0 && strcmp(enableEnvVar, "0") != 0) {
-            enableTiming_ = true;
-            stream_ = std::ofstream(fileName, std::ios::out | std::ios::trunc);
-        }
-    }
-    bool isEnableTiming() { return enableTiming_; }
-    std::ofstream &getOStream() { return stream_; }
-
-private:
-    bool enableTiming_;
-    std::unordered_map<std::string, double> elapsedTable;
-    std::ofstream stream_;
-};
-
-class TimeElapsedAccumulator {
-public:
-    double  elapsedTime;
-    const char* name;
-    TimeElapsedAccumulator(const char* name): elapsedTime(0), name(name) {};   
+    double elapsedTime;
+    int frequency;
+    TimeElapsedAccumulator(): elapsedTime(0), frequency(0) {};
+    void accumulate(double elapsed) { elapsedTime += elapsed; frequency += 1;};
 };
 
 class TimeElapsed {
 public:
     TimeElapsed(const char *opName, TimeElapsedAccumulator* acc=nullptr) : opName_(opName), accumulator(acc) {
-        if (timeElapsedRecord.isEnableTiming()) {
-            start_ = std::chrono::steady_clock::now();
-        }
+        start_ = std::chrono::steady_clock::now();
     }
 
     void tick() {
-        if (timeElapsedRecord.isEnableTiming()){
-            auto now_ = std::chrono::steady_clock::now();
-            if (accumulator != nullptr){
-                elapsed = now_ - start_;
-                accumulator->elapsedTime += elapsed.count();
-                accumulator = nullptr;
-            }  
-        }
+        auto now_ = std::chrono::steady_clock::now();
+        if (accumulator != nullptr){
+            elapsed = now_ - start_;
+            accumulator->accumulate(elapsed.count());
+            accumulator = nullptr;
+        }  
     }
 
     ~TimeElapsed() {
@@ -81,8 +63,32 @@ private:
     TimeElapsedAccumulator* accumulator;   
     std::chrono::time_point<std::chrono::steady_clock> start_;
     std::chrono::duration<double, std::milli> elapsed;
-    static TimeElapsedRecord timeElapsedRecord;
 };
+
+class TimeElapsedRecorder {
+public:
+    TimeElapsedRecorder(const char *fileName) : enableTiming_(false) {
+        enableTiming_ = true;
+        stream_ = std::ofstream(fileName, std::ios::out | std::ios::trunc);
+    }
+    bool isEnableTiming() { return enableTiming_; }
+    std::ofstream &getOStream() { return stream_; }
+
+    ~TimeElapsedRecorder() {
+        for(int i=0; i < accumulators.size(); i++){
+            if(accumulators[i].frequency){
+	        stream_ << "Timer name: " << impl::adaptorEnumToName(i) << " Timer's total running time: " << accumulators[i].elapsedTime << " Frequency: " << accumulators[i].frequency << std::endl;
+            }
+        }
+    }
+private:
+    bool enableTiming_;
+    std::ofstream stream_;
+public:
+    std::array<TimeElapsedAccumulator, impl::ENUM_ADAPTORS_TOTAL> accumulators;
+};
+
+TimeElapsedRecorder& getTimeElapsedRecorder();
 
 class ConvertType {
 public:

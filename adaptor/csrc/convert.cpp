@@ -207,6 +207,9 @@ const char *getDiopiErrorStr(diopiError_t err) {
 }
 #undef DIOPI_ERROR_TO_STR
 
-TimeElapsedRecord TimeElapsed::timeElapsedRecord("op_time.dat");
-
 std::vector<diopiMemoryFormat_t> defaultFormats{};
+
+TimeElapsedRecorder& getTimeElapsedRecorder(){
+    static TimeElapsedRecorder timeElapsedRecorder("op_time.dat");
+    return timeElapsedRecorder;
+}

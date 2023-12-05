@@ -515,6 +515,7 @@ def autogen_op_adaptor(
     op_configs: dict, device: str, func_infos: dict, impl_funcs: dict
 ) -> list:
     adaptors_code = []
+    adaptors_enums = []
     cast = (
         op_configs["Common"]["cast"] if "Common" in op_configs.keys() else ""
     )
@@ -540,10 +541,16 @@ def autogen_op_adaptor(
             call_args = [
                 arg.split(" ")[-1] for arg in func_infos[func]["call_args"]
             ]
+            
+            adaptors_enums.append(op_name.upper()+"_ADAPTOR")
+            adaptors_enums.append(op_name.upper()+"_CAST_INPUT")
+            adaptors_enums.append(op_name.upper())
+            
             adaptors_code.append(
                 OT.adaptor_template.substitute(
                     env=dict(
                         op_name=op_name,
+                        op_name_upper = op_name.upper(),
                         attrs=func_infos[func]["call_args"],
                         device=device
                         if not device_mapping
@@ -642,10 +649,16 @@ for (int i = 0; i < ${num}; ++i) {
                 else:
                     new_name = name
                 call_args.append(new_name)
+            
+            adaptors_enums.append(op_name.upper()+"_ADAPTOR")
+            adaptors_enums.append(op_name.upper()+"_CAST_INPUT")
+            adaptors_enums.append(op_name.upper())
+
             adaptors_code.append(
                 OT.adaptor_template.substitute(
                     env=dict(
                         op_name=op_name,
+                        op_name_upper = op_name.upper(),
                         attrs=", ".join(func_infos[func]["call_args"]),
                         device=device_mapping if device_mapping else device,
                         new_input=new_input,
@@ -656,7 +669,7 @@ for (int i = 0; i < ${num}; ++i) {
                     )
                 )
             )
-    return adaptors_code
+    return adaptors_code, adaptors_enums
 
 
 def get_impl_funcs_declaration(
@@ -706,7 +719,7 @@ def gen_autogen_operators(
     op_configs = analysis_configs(configs, funcs_info)
 
     # generate adaptor implementation codes
-    adaptors_code = autogen_op_adaptor(
+    adaptors_code,adaptors_enums = autogen_op_adaptor(
         op_configs, device, funcs_info, impl_funcs
     )
 
@@ -732,12 +745,29 @@ def gen_autogen_operators(
             composite_funcs_decl=list(composite_funcs_decl.values()),
         ),
     )
+    adaptor_fm.write(
+        "adaptors_enum.hpp",
+        OT.enum_declaration_template,
+        dict(
+            device=device,
+            enum_declaration=list(map(lambda x:"ENUM_" + x + ",", adaptors_enums)),
+            enum_names = list(map(lambda x: "\"" + x + "\"",adaptors_enums))
+         ),              
+    )
+    adaptor_fm.write(
+        "adaptors_enum.cpp",
+        OT.adaptor_timer_template,
+        dict(
+            enum_names = list(map(lambda x: "\"" + x + "\"",adaptors_enums))
+         ),
+    )
 
 
 def declare_outputs(adaptor_fm: FileManager) -> None:
     adaptor_fm.will_write("diopi_adaptor.cpp")
     adaptor_fm.will_write("impl_functions.hpp")
-
+    adaptor_fm.will_write("adaptors_enum.hpp")
+    adaptor_fm.will_write("adaptors_enum.cpp")
 
 def gen_all_codes() -> None:
     dirs, device = prepare()

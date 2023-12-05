@@ -48,12 +48,17 @@ if(USE_ADAPTOR)
     add_custom_target(adaptor_gen_dependency DEPENDS ${ADAPTOR_TEMPLATE_CODE})
 
     set(ADAPTOR_CSRC_PATH "${ADAPTOR_DIR}/csrc")
-    set(GEN_FILES ${ADAPTOR_CSRC_PATH}/diopi_adaptor.cpp ${ADAPTOR_CSRC_PATH}/impl_functions.hpp)
+    set(GEN_FILES ${ADAPTOR_CSRC_PATH}/diopi_adaptor.cpp 
+                  ${ADAPTOR_CSRC_PATH}/impl_functions.hpp 
+                  ${ADAPTOR_CSRC_PATH}/adaptor_enum.hpp 
+                  ${ADAPTOR_CSRC_PATH}/adaptor_enum.cpp)
     add_custom_target(adaptor_code_gen
         COMMAND python3 ${ADAPTOR_DIR}/codegen/gen.py --diopi_dir=${CMAKE_SOURCE_DIR}/../ --output_dir=${ADAPTOR_CSRC_PATH} --config_device=camb
         BYPRODUCTS ${GEN_FILES}
         DEPENDS adaptor_gen_dependency)
-    list(APPEND IMPL_SRC ${ADAPTOR_CSRC_PATH}/convert.cpp ${ADAPTOR_CSRC_PATH}/diopi_adaptor.cpp ${ADAPTOR_CSRC_PATH}/composite_ops.cpp)
+
+    file(GLOB ADAPTOR_GENED_CODE RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${ADAPTOR_DIR}/csrc/*.cpp)
+    list(APPEND IMPL_SRC ${ADAPTOR_GENED_CODE})
 endif()
 
 
