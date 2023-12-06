@@ -98,6 +98,9 @@ ${composite_funcs_decl}
 namespace impl {
 
 enum ENUM_ADAPTORS_TIMERS{
+  ENUM_CAST_MEMORYFORMAT,
+  ENUM_CASTOUT_CONSTRUCT,
+  ENUM_CASTOUT_DECONSTRUCT,
   ${enum_declaration,}
   ENUM_ADAPTORS_TOTAL
 };
@@ -117,8 +120,11 @@ const char* adaptorEnumToName(unsigned idx);
 namespace impl {
     
     const char* adaptorEnumToName(unsigned idx)
-    { 
+    {   
         static std::array<const char*, ENUM_ADAPTORS_TOTAL> timerNames = { \
+        "CAST_MEMORYFORMAT",\
+        "CASTOUT_CONSTRUCT",\
+        "CASTOUT_DECONSTRUCT",\
         ${enum_names}\
         };
         return timerNames[idx];

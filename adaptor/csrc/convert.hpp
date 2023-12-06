@@ -172,6 +172,7 @@ ConvertType castImpl(diopiContextHandle_t ctx, T src, T *dst, std::vector<diopiM
     diopiSize_t dstStride = srcStride;
     diopiSize_t dstSize = srcSize;
     if (needConvertMemoryFormat) {
+        TimeElapsed castOutConstructTimeElapsed("cast_memoryformat",&(getTimeElapsedRecorder().accumulators[impl::ENUM_CAST_MEMORYFORMAT]));
         diopiContiguous(ctx, &memoryFormatedTensor, tmp0, targetMemoryFormats[0]);
         convertType.setMemoryFormatConverted();
         diopiGetTensorStride(memoryFormatedTensor, &dstStride);
@@ -212,6 +213,7 @@ ConvertType requireTensorIfMemoryFormatConvert(diopiContextHandle_t ctx, T src, 
     std::vector<int64_t> dstStrideVec;
     diopiSize_t dstSize = srcSize;
     if (needConvertMemoryFormat) {
+        TimeElapsed castOutConstructTimeElapsed("cast_memoryformat",&(getTimeElapsedRecorder().accumulators[impl::ENUM_CAST_MEMORYFORMAT]));
         diopiMemoryFormat_t targetMemoryForamt = targetMemoryFormats[0];
         dstStrideVec = calcStrides(dstSize, targetMemoryForamt);
         dstStride.data = dstStrideVec.data();
@@ -272,7 +274,7 @@ private:
 public:
     DiopiTensorWrapper(diopiContextHandle_t ctx, diopiTensorHandle_t payload, std::vector<diopiMemoryFormat_t> supportMemoryFormat = {}, bool inp = false)
         : ctx_(ctx), payload_(payload) {
-        TimeElapsed castOutConstructTimeElapsed("out_construct");
+        TimeElapsed castOutConstructTimeElapsed("castout_construct",&(getTimeElapsedRecorder().accumulators[impl::ENUM_CASTOUT_CONSTRUCT]));
         if (inp) {
             convertType_ = castImpl<diopiTensorHandle_t, strategy>(ctx, payload_, &tmp_, supportMemoryFormat);
         } else {
@@ -281,7 +283,7 @@ public:
     }
 
     ~DiopiTensorWrapper() {
-        TimeElapsed castOutDeconstructTimeElapsed("out_deconstruct");
+        TimeElapsed castOutDeconstructTimeElapsed("castout_deconstruct",&(getTimeElapsedRecorder().accumulators[impl::ENUM_CASTOUT_DECONSTRUCT]));
         if (!convertType_.isConverted()) {
             if (tmp_) {
                 payload_ = tmp_;
