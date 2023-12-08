@@ -17,6 +17,8 @@
 #include "acl/acl_rt.h"
 #include "ge/ge_api.h"
 
+#define INTERFACE_NOT_IMPL std::cout << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << ": not impled yet" << std::endl;
+
 namespace at::ascend_npu {
 
 class TensorWrapper : public at::Tensor {
@@ -26,25 +28,54 @@ public:
     TensorWrapper() : at::Tensor::Tensor() {}
 
     // fix: invalid initialization of reference of type 'const at::ascend_npu::TensorWrapper&' from expression of type 'const at::Tensor'
-    explicit TensorWrapper(const at::Tensor& other) : at::Tensor::Tensor(other) {}
+    TensorWrapper(const at::Tensor& other) : at::Tensor::Tensor(other) {}
+
+    // fix: error: cannot bind non-const lvalue reference of type 'at::ascend_npu::TensorWrapper&' to an rvalue of type 'at::ascend_npu::TensorWrapper'
+    TensorWrapper(at::Tensor&& other) : at::Tensor(std::move(other)) {}
 
     // fix: have different types 'const at::ascend_npu::TensorWrapper' and 'at::Tensor'
     operator at::Tensor() const { return static_cast<at::Tensor>(*this); }
 
     // fix: no match for 'operator=' (operand types are 'at::ascend_npu::TensorWrapper' and 'at::Tensor')
-    TensorWrapper operator=(at::Tensor other) {
+    TensorWrapper& operator=(const at::Tensor& other) {
         at::Tensor::operator=(other);
         return *this;
     }
 
-    TensorWrapper contiguous(c10::MemoryFormat memory_format) const;
+    TensorWrapper& operator=(at::Tensor&& other) {
+        at::Tensor::operator=(std::move(other));
+        return *this;
+    }
+
+    TensorWrapper contiguous(c10::MemoryFormat memory_format = MemoryFormat::Contiguous) const;
+
+    TensorWrapper clone(c10::optional<at::MemoryFormat> memory_format = c10::nullopt) const;
+
+    TensorWrapper reshape(at::IntArrayRef shape) const {INTERFACE_NOT_IMPL}
+
+    TensorWrapper
+        to(at::TensorOptions options = {}, bool non_blocking = false, bool copy = false, c10::optional<at::MemoryFormat> memory_format = c10::nullopt) const {
+        INTERFACE_NOT_IMPL
+    }
+
 };  // class TensorWrapper
 
 using TensorWrapperList = c10::ArrayRef<TensorWrapper>;
 
 };  //  namespace at::ascend_npu
 
-// #define Tensor ascend_npu::TensorWrapper
+namespace at {
+
+inline ascend_npu::TensorWrapper ones_wrapper(at::IntArrayRef size, at::TensorOptions options = {}) { INTERFACE_NOT_IMPL }
+
+inline ascend_npu::TensorWrapper zeros_wrapper(at::IntArrayRef size, at::TensorOptions options = {}) { INTERFACE_NOT_IMPL }
+
+};  // namespace at
+
+#define Tensor ascend_npu::TensorWrapper
+#define ones ones_wrapper
+#define zeros zeros_wrapper
+
 // #define TensorList ascend_npu::TensorWrapperList
 
 #include "op_plugin/AclOpsInterface.h"
@@ -178,8 +209,6 @@ using TensorWrapperList = c10::ArrayRef<TensorWrapper>;
         }                                                                                                                                              \
     } while (0)
 
-#define INTERFACE_NOT_IMPL std::cout << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << ": not impled yet" << std::endl;
-
 static void warn_(const ::c10::Warning& warning) { INTERFACE_NOT_IMPL; }
 
 #define TORCH_NPU_WARN(...) warn_(::c10::Warning(::c10::UserWarning(), {__func__, __FILE__, static_cast<uint32_t>(__LINE__)}, ::c10::str(__VA_ARGS__), false));
@@ -256,7 +285,7 @@ struct NPUGeneratorImpl : public c10::GeneratorImpl {
     // Temporarily accommodates call sites that use philox_engine_inputs.
     // Allows incremental refactor of call sites to use philox_npu_state.
     std::pair<uint64_t, uint64_t> philox_engine_inputs(uint64_t increment);
-    static c10::DeviceType device_type() { return c10::DeviceType::XPU; }
+    static c10::DeviceType device_type() { return c10::DeviceType::XLA; }
     void* generator_ = nullptr;
 };
 

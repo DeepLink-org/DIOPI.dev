@@ -14,8 +14,12 @@ FetchContent_Declare(op_plugin
 FetchContent_MakeAvailable(op_plugin)
 message(STATUS "op-plugin download done")
 
+set(INCLUDE_CUSTOM_HEADER_LINE "#include \"torch_npu/csrc/framework/DIOPIAdapter.h\"")
+set(GENED_FILE_PATH "${op_plugin_SOURCE_DIR}/op_plugin/AclOpsInterface.h")
 add_custom_target(op_plugin_gen
-  COMMAND cd ${op_plugin_SOURCE_DIR} && bash ./gencode.sh 2.0 python
+  COMMAND echo "" > ${GENED_FILE_PATH}
+  COMMAND cd ${op_plugin_SOURCE_DIR} && bash ./gencode.sh 2.0 python && sed -i '22i ${INCLUDE_CUSTOM_HEADER_LINE}' ${GENED_FILE_PATH}
+
 )
 
 add_subdirectory(third_party/acl)
@@ -517,7 +521,7 @@ set(OP_PLUGIN_API_SRC1
 set(OP_PLUGIN_UTILS_SRC
     #${OP_PLUGIN_UTILS_DIR}/AdvancedIndex.cpp
     ${OP_PLUGIN_UTILS_DIR}/KernelNpuOutputSize.cpp
-    ${OP_PLUGIN_UTILS_DIR}/op_api_common.cpp
+    #${OP_PLUGIN_UTILS_DIR}/op_api_common.cpp
     ${OP_PLUGIN_UTILS_DIR}/OpUtils.cpp
     ${OP_PLUGIN_UTILS_DIR}/custom_functions/aclops/EmbeddingKernelNpu.cpp
     ${OP_PLUGIN_UTILS_DIR}/custom_functions/aclops/GeluBackwardKernelNpu.cpp
@@ -633,8 +637,6 @@ set(OLD_IMPL_SRC
     ${OLD_IMPL_DIR}/functions/reduce.cpp
     ${OLD_IMPL_DIR}/functions/where.cpp
     ${OLD_IMPL_DIR}/functions/multinomial.cpp
-    #${OLD_IMPL_DIR}/test/export_functions.cpp
-    #${OLD_IMPL_DIR}/test/conform_test.cpp
     ${OLD_IMPL_DIR}/common/utils.cpp
     ${OLD_IMPL_DIR}/common/debug.cpp
     ${OLD_IMPL_DIR}/common/generator_helper.cpp
