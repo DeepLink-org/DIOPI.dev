@@ -283,7 +283,9 @@ inline at::Scalar buildATen(const diopiScalar_t* scalar) {
 
 at::Generator buildATen(diopiGeneratorHandle_t generator);
 
-at::Tensor view(const at::Tensor input, const c10::IntArrayRef sizes, const c10::IntArrayRef strides = {});
+at::Tensor view(const at::Tensor input, const c10::IntArrayRef sizes);
+
+at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride, c10::optional<int64_t> storage_offset = 0);
 
 const at::Tensor buildATen(diopiConstTensorHandle_t tensor);
 
