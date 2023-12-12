@@ -203,4 +203,6 @@ ascend_npu:
 - diopiNormal
 - diopiNormalInp
 - diopiNorm
+- diopiIndexPut
+- diopiIndexPutInp
 

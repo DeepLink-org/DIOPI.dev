@@ -1652,22 +1652,22 @@ at::Generator buildATen(diopiGeneratorHandle_t generator) {
     return gen;
 }
 
-at::Tensor view(const at::Tensor input, const c10::IntArrayRef sizes, const c10::IntArrayRef strides) {
+at::Tensor view(const at::Tensor input, const c10::IntArrayRef sizes) {
     TORCH_CHECK(c10::multiply_integers(sizes) == input.numel());
     TORCH_CHECK(!input.is_cpu());
     std::vector<int64_t> stridesVec(sizes.size(), 1);
-    if (strides.size() > 0) {
-        std::copy(strides.begin(), strides.end(), stridesVec.begin());
-    } else {
-        int st = 1;
-        for (int64_t i = sizes.size(); i > 0; --i) {
-            stridesVec[i - 1] = st;
-            if (sizes[i - 1] == 0) continue;
-            if (sizes[i - 1] == -1) st = -1;
-            if (st != -1) st *= sizes[i - 1];
-        }
+    int st = 1;
+    for (int64_t i = sizes.size(); i > 0; --i) {
+        stridesVec[i - 1] = st;
+        if (sizes[i - 1] == 0) continue;
+        if (sizes[i - 1] == -1) st = -1;
+        if (st != -1) st *= sizes[i - 1];
     }
     return fromPreAllocated(input.data_ptr(), sizes, stridesVec, input.options());
+}
+
+at::Tensor as_strided(const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride, c10::optional<int64_t> storage_offset) {
+    return fromPreAllocated(self.data_ptr(), size, stride, self.options());
 }
 
 void setCurCtx(diopiContextHandle_t ctx) {
@@ -1693,7 +1693,7 @@ at::Tensor& wrapper__copy_(at::Tensor& self, const at::Tensor& src, bool non_blo
 at::Tensor wrapper__view(const at::Tensor& self, at::IntArrayRef size) { return impl::aten::view(self, size); }
 
 at::Tensor wrapper__as_strided(const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride, c10::optional<int64_t> storage_offset) {
-    return at_npu::native::NPUNativeFunctions::as_strided(self, size, stride, storage_offset);
+    return impl::aten::as_strided(self, size, stride, storage_offset);
 }
 
 void ascend_diopi_fallback(const c10::OperatorHandle& op, at::DispatchKeySet dispatch_keys, torch::jit::Stack* stack) {
@@ -1713,6 +1713,6 @@ TORCH_LIBRARY_IMPL(aten, XLA, m) {
     m.impl("as_strided", TORCH_FN(wrapper__as_strided));
 };
 
-TORCH_LIBRARY_IMPL(_, XLA, m) { m.fallback(torch::CppFunction::makeFromBoxedFunction<&ascend_diopi_fallback>()); }
+// TORCH_LIBRARY_IMPL(_, XLA, m) { m.fallback(torch::CppFunction::makeFromBoxedFunction<&ascend_diopi_fallback>()); }
 
 }  // namespace at
