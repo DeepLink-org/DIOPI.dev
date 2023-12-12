@@ -32,7 +32,6 @@ ascend:
 - diopiClampMinScalar
 - diopiClampScalar
 - diopiContiguous
-- diopiCopyInp
 - diopiCos
 - diopiCosInp
 - diopiCrossEntropyLoss
@@ -205,4 +204,5 @@ ascend_npu:
 - diopiNorm
 - diopiIndexPut
 - diopiIndexPutInp
+- diopiCopyInp
 
