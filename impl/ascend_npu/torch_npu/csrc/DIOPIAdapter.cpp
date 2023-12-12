@@ -2533,6 +2533,6 @@ TORCH_LIBRARY_IMPL(aten, XLA, m) {
     m.impl("as_strided", TORCH_FN(wrapper__as_strided));
 };
 
-// TORCH_LIBRARY_IMPL(_, XLA, m) { m.fallback(torch::CppFunction::makeFromBoxedFunction<&ascend_diopi_fallback>()); }
+TORCH_LIBRARY_IMPL(_, XLA, m) { m.fallback(torch::CppFunction::makeFromBoxedFunction<&ascend_diopi_fallback>()); }
 
 }  // namespace at

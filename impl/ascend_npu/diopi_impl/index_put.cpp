@@ -193,7 +193,8 @@ at::Tensor& index_put_aicore(at::Tensor& self, std::vector<at::Tensor> indices_e
     return self;
 }
 
-at::Tensor& indexPut(at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices, const at::Tensor& value, const bool accumulate, const bool unsafe) {
+at::Tensor& indexPutInp(at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices, const at::Tensor& value, const bool accumulate,
+                        const bool unsafe) {
     if (self.device().type() == at::kCPU) {
         return at::native::_index_put_impl_(self, indices, value, accumulate, unsafe);
     }
@@ -255,18 +256,36 @@ diopiError_t diopiIndexPut(diopiContextHandle_t ctx, diopiTensorHandle_t out, di
                            diopiConstTensorHandle_t* indices, int64_t indicesCounts, bool accumulate) {
     BEGIN_CALL_ACL_OP(out, input, values);
     DIOPI_CHECK_PTR(indices);
+    // handle empty tensor
+    if (outAt.numel() == 0) {
+        return diopiSuccess;
+    }
+    outAt.copy_(inputAt);
     c10::List<c10::optional<at::Tensor>> indicesAtList;
     indicesAtList.reserve(indicesCounts);
     assert(indicesCounts >= 1);
     for (int i = 0; i < indicesCounts; ++i) {
         indicesAtList.emplace_back(impl::aten::buildATen(indices[i]));
     }
-    outAt = indexPut(inputAt, indicesAtList, valuesAt, accumulate, false);
+    indexPutInp(outAt, indicesAtList, valuesAt, accumulate, false);
     END_CALL_ACL_OP();
 }
 
 diopiError_t diopiIndexPutInp(diopiContextHandle_t ctx, diopiTensorHandle_t input, diopiConstTensorHandle_t values, diopiConstTensorHandle_t* indices,
                               int64_t indicesCounts, bool accumulate) {
-    return OP_IMPL_NS::diopiIndexPut(ctx, input, input, values, indices, indicesCounts, accumulate);
+    BEGIN_CALL_ACL_OP(input, values);
+    DIOPI_CHECK_PTR(indices);
+    // handle empty tensor
+    if (inputAt.numel() == 0) {
+        return diopiSuccess;
+    }
+    c10::List<c10::optional<at::Tensor>> indicesAtList;
+    indicesAtList.reserve(indicesCounts);
+    assert(indicesCounts >= 1);
+    for (int i = 0; i < indicesCounts; ++i) {
+        indicesAtList.emplace_back(impl::aten::buildATen(indices[i]));
+    }
+    indexPutInp(inputAt, indicesAtList, valuesAt, accumulate, false);
+    END_CALL_ACL_OP();
 }
 }  // namespace OP_IMPL_NS

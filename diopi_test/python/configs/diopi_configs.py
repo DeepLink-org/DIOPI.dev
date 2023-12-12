@@ -7002,37 +7002,37 @@ diopi_configs = {
     #     ),
     # ),
 
-    # 'index_put_acc_bool_indices_zeros': dict(
-    #     name=['index_put'],
-    #     interface=['CustomizedTest'],
-    #     is_inplace=True,
-    #     para=dict(
-    #         accumulate=[True, False]
-    #     ),
-    #     tensor_para=dict(
-    #         gen_fn='Genfunc.randn',
-    #         args=[
-    #             {
-    #                 "ins": ['input'],
-    #                 "shape": ((4, 4), (4, 4)),
-    #                 "dtype": [np.float32, np.int64],
-    #                 "gen_fn": 'Genfunc.ones',
-    #             },
-    #             {
-    #                 "ins": ['indices1'],
-    #                 "shape": ((4, 4), (4, 4)),
-    #                 "dtype": [np.bool_],
-    #                 "gen_fn": 'Genfunc.zeros',
-    #             },
-    #             {
-    #                 "ins": ['values'],
-    #                 "shape": ((0,), (0,)),
-    #                 "dtype": [np.float32, np.int64],
-    #                 "gen_fn": 'Genfunc.ones'
-    #             },
-    #         ]
-    #     ),
-    # ),
+    'index_put_acc_bool_indices_zeros': dict(
+        name=['index_put'],
+        interface=['CustomizedTest'],
+        is_inplace=True,
+        para=dict(
+            accumulate=[True, False]
+        ),
+        tensor_para=dict(
+            gen_fn='Genfunc.randn',
+            args=[
+                {
+                    "ins": ['input'],
+                    "shape": ((4, 4), (4, 4)),
+                    "dtype": [np.float32, np.int64],
+                    "gen_fn": 'Genfunc.ones',
+                },
+                {
+                    "ins": ['indices1'],
+                    "shape": ((4, 4), (4, 4)),
+                    "dtype": [np.bool_],
+                    "gen_fn": 'Genfunc.zeros',
+                },
+                {
+                    "ins": ['values'],
+                    "shape": ((0,), (0,)),
+                    "dtype": [np.float32, np.int64],
+                    "gen_fn": 'Genfunc.ones'
+                },
+            ]
+        ),
+    ),
 
     'index_put_one_indices': dict(
         name=['index_put'],
