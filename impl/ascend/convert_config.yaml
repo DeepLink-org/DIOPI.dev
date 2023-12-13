@@ -247,3 +247,6 @@
     
 - diopiSort:
     dtype: (float64)->float32
+
+- diopiDestIndexCopyKV:
+    dtype: (int32)->int64
