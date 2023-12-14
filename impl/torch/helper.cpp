@@ -75,9 +75,75 @@ diopiDtype_t getDIOPITensorType(at::Tensor& input) {
     }
 }
 
+namespace {
+
+using rdtsc_t = uint64_t;
+constexpr double kCpuFreq = 3.2e9;
+
+rdtsc_t rdtsc() {
+    uint32_t lo, hi;
+    __asm__ __volatile__ (
+            "xorl %%eax, %%eax\n"
+            "cpuid\n"
+            "rdtsc\n"
+            : "=a" (lo), "=d" (hi)
+            :
+            : "%ebx", "%ecx");
+    return (rdtsc_t) hi << 32 | lo;
+}
+
+class TicToc {
+public:
+    TicToc() : start_(rdtsc()) {}
+
+    void tic() {
+        start_ = rdtsc();
+    }
+
+    rdtsc_t toc() {
+        auto end = rdtsc();
+        return end - start_;
+    }
+
+private:
+    rdtsc_t start_;
+};
+
+struct TimeRecord {
+    std::string name;
+    rdtsc_t tsc{0};
+    int count{0};
+
+    ~TimeRecord() {
+        auto time = static_cast<double>(tsc) / kCpuFreq;
+        std::cout << name << " time: " << time << " count: " << count << " avg: " << time / count << std::endl;
+    }
+};
+
+TimeRecord buildAtenTimeRecord{"buildAten"};
+
+class BuildAtenTimeRecorder {
+public:
+    BuildAtenTimeRecorder(TimeRecord& record) : record_(record) {
+        timer_.tic();
+    }
+
+    ~BuildAtenTimeRecorder() {
+        record_.tsc += timer_.toc();
+        record_.count++;
+    }
+
+private:
+    TimeRecord& record_;
+    TicToc timer_;
+};
+
+}  // namespace
+
 template <typename T>
 at::Tensor buildATen(T tensor) {
     if (tensor == nullptr) return at::Tensor();
+    BuildAtenTimeRecorder recorder{buildAtenTimeRecord};
 
     diopiDtype_t dtype;
     diopiGetTensorDtype(tensor, &dtype);
