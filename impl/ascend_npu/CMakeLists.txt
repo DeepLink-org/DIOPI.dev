@@ -569,6 +569,7 @@ set(IMPL_SRC
   torch_npu/csrc/AdvancedIndex.cpp
   torch_npu/csrc/NPUNativeFunctions.cpp
   torch_npu/csrc/CopyKernel.cpp
+  torch_npu/csrc/LocalScalarDenseNpu.cpp
 )
 
 set(OLD_IMPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../ascend/)
@@ -622,7 +623,7 @@ set(OLD_IMPL_SRC
     ${OLD_IMPL_DIR}/functions/arange.cpp
     ${OLD_IMPL_DIR}/functions/gather.cpp
     ${OLD_IMPL_DIR}/functions/layer_norm.cpp
-    ${OLD_IMPL_DIR}/functions/index.cpp
+    ${OLD_IMPL_DIR}/functions/index_select.cpp
     ${OLD_IMPL_DIR}/functions/repeat.cpp
     ${OLD_IMPL_DIR}/functions/group_norm.cpp
     ${OLD_IMPL_DIR}/functions/flip.cpp

@@ -208,4 +208,6 @@ ascend_npu:
 - diopiIndexPutInp
 - diopiIndex
 - diopiDestIndexCopyKV
+- diopiTokenSoftmaxReduceVInference
 # - diopiCopyInp
+

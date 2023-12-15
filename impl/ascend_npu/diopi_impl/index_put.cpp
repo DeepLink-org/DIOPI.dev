@@ -203,11 +203,17 @@ at::Tensor& indexPutInp(at::Tensor& self, const c10::List<c10::optional<at::Tens
     std::vector<at::Tensor> all_defined_indices;
     std::vector<at::Tensor> indices_expand;
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
+    // // bool tensor -->> int tensor
     indices_expand = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices);
+    //先使用aten原生
+    // indices_expand = at::native::expandTensors(self, indices);
     for (at::Tensor index_opt : indices_expand) {
         indices_expand_list.push_back(index_opt);
     }
+    std::cout << "make info前 self shape: " << self.sizes() << std::endl;
     auto info = op_plugin::AdvanceIndex::make_info(self, indices_expand_list);
+    std::cout << "make info后 info.src shape: " << info.src.sizes() << std::endl;
+
     TORCH_CHECK(op_plugin::AdvanceIndex::is_expandable_to(value.sizes(), info.src.sizes()),
                 "shape mismatch: value tensor of shape ",
                 value.sizes(),
@@ -254,10 +260,11 @@ namespace OP_IMPL_NS {
 
 diopiError_t diopiIndexPut(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, diopiConstTensorHandle_t values,
                            diopiConstTensorHandle_t* indices, int64_t indicesCounts, bool accumulate) {
+    std::cout << "indicesCounts: " << indicesCounts << std::endl;
     BEGIN_CALL_ACL_OP(out, input, values);
     DIOPI_CHECK_PTR(indices);
-    // handle empty tensor
-    if (outAt.numel() == 0) {
+    // handle undefined tensor and empty tensor
+    if (!outAt.defined() || outAt.numel() == 0 || !inputAt.defined() || inputAt.numel() == 0) {
         return diopiSuccess;
     }
     outAt.copy_(inputAt);
@@ -275,8 +282,8 @@ diopiError_t diopiIndexPutInp(diopiContextHandle_t ctx, diopiTensorHandle_t inpu
                               int64_t indicesCounts, bool accumulate) {
     BEGIN_CALL_ACL_OP(input, values);
     DIOPI_CHECK_PTR(indices);
-    // handle empty tensor
-    if (inputAt.numel() == 0) {
+    // handle undefined tensor and empty tensor
+    if (!inputAt.defined() || inputAt.numel() == 0) {
         return diopiSuccess;
     }
     c10::List<c10::optional<at::Tensor>> indicesAtList;
@@ -288,4 +295,41 @@ diopiError_t diopiIndexPutInp(diopiContextHandle_t ctx, diopiTensorHandle_t inpu
     indexPutInp(inputAt, indicesAtList, valuesAt, accumulate, false);
     END_CALL_ACL_OP();
 }
+
+diopiError_t diopiDestIndexCopyKV(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t k, diopiConstTensorHandle_t destLoc) {
+    BEGIN_CALL_ACL_OP(out, k, destLoc);
+    indexPutInp(outAt, {destLocAt}, kAt, false, false);
+    std::cout << "取值cpu: " << destLocAt[0].item<int>() << std::endl;
+    END_CALL_ACL_OP();
+}
+
+diopiError_t diopiTokenSoftmaxReduceVInference(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t logics, diopiConstTensorHandle_t v,
+                                               diopiConstTensorHandle_t bLoc, diopiConstTensorHandle_t bStartLoc, diopiConstTensorHandle_t bSeqLen,
+                                               int maxInputLen, int otherKVIndex) {
+    impl::aten::setCurCtx(ctx);
+    at::Tensor atOut = impl::aten::buildATen(out);
+    at::Tensor atV = impl::aten::buildATen(v);
+    at::Tensor atLogics = impl::aten::buildATen(logics);
+    at::Tensor atBLoc = impl::aten::buildATen(bLoc);
+    at::Tensor atBStartLoc = impl::aten::buildATen(bStartLoc);
+    at::Tensor atBSeqLen = impl::aten::buildATen(bSeqLen);
+
+    int batch = atBLoc.size(0);
+    int head = atV.size(1);
+    int dim = atV.size(2);
+
+    for (int i = 0; i < batch; ++i) {
+        int curSeqLen = atBSeqLen[i].item<int>();
+        int curSeqStartLoc = atBStartLoc[i].item<int>();
+        std::cout << "curSeqLen: " << curSeqLen << std::endl;
+        std::cout << "curSeqStartLoc: " << curSeqStartLoc << std::endl;
+        // at::Tensor P = atLogics.slice(1, curSeqStartLoc, curSeqStartLoc + curSeqLen).softmax(-1).reshape({head, 1, 1, curSeqLen}).transpose(0, 1);
+        // at::Tensor vLoc = atBLoc[i].index_select(0, at::arange(maxInputLen - curSeqLen, maxInputLen, atLogics.device()));
+        // at::Tensor V = atV.index({vLoc}).view({1, curSeqLen, head, dim}).transpose(1, 2);
+        // atOut[i] = at::matmul(P, V).view({head, dim});
+    }
+    impl::aten::unsetCurCtx();
+    return diopiSuccess;
+}
+
 }  // namespace OP_IMPL_NS

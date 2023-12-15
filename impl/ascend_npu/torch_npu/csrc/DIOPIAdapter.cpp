@@ -1801,6 +1801,8 @@ private:
 
 void OpCommandImpl::Run(bool sync, c10::SmallVector<int64_t, N>& sync_index, c10::SmallVector<at::Tensor, N>& outputTensor) {
     NPU_LOGD("Op %s start run.", opName.c_str());
+    std::cout << "是否sync: " << sync << std::endl;
+    std::cout << "sync_index: " << sync_index << std::endl;
 // RECORD_FUNCTION(opName, std::vector<c10::IValue>({}));
 #if 0
       if (PyGILState_Check()) {
@@ -1866,6 +1868,7 @@ aclError OpCommandImpl::InnerRun(const string& name, AclExecParam& params, bool 
         }
 #endif
         if (!sync) {
+            std::cout << "不同步" << std::endl;
             ret = aclopCompileAndExecute(name.c_str(),
                                          inputSize,
                                          params.inDesc.data(),
@@ -1900,6 +1903,7 @@ aclError OpCommandImpl::InnerRun(const string& name, AclExecParam& params, bool 
                     NPU_CHECK_ERROR(aclGetTensorDescDimV2(params.outDesc[sync_index[i]], j, &dimSize));
                     real_shape.emplace_back(dimSize);
                 }
+                std::cout << "real_shape: " << real_shape << std::endl;
                 outputTensor[sync_index[i]].resize_(real_shape);
             }
         }
@@ -2221,8 +2225,6 @@ template OpCommand& OpCommand::OpCommand::Attr<c10::Scalar>(const string& name, 
 void OpCommand::Run() {
     aclCmd->SetEnginePriority();
     const string& op_name = aclCmd->GetName();
-    bool sync = true;
-    c10::SmallVector<int64_t, N> sync_index;
     aclCmd->Run(sync, sync_index, outputTensor);
     if (sync) {
         Sync();
@@ -2232,8 +2234,10 @@ void OpCommand::Run() {
 }
 
 OpCommand& OpCommand::Sync(c10::SmallVector<int64_t, N>& index) {
-    INTERFACE_NOT_IMPL
-    Sync();
+    sync_index = index;
+    if (!index.empty()) {
+        sync = true;
+    }
     return *this;
 }
 
@@ -2418,6 +2422,7 @@ at::Tensor fromPreAllocated(void* data, at::IntArrayRef sizes, at::IntArrayRef s
 }
 
 const at::Tensor buildATen(diopiConstTensorHandle_t tensor) {
+    // std::cout << __func__ << " tensor是否不为空: " << (tensor != nullptr) << std::endl;
     if (tensor == nullptr) return at::Tensor();
 
     diopiDtype_t dtype;
@@ -2430,6 +2435,7 @@ const at::Tensor buildATen(diopiConstTensorHandle_t tensor) {
     ::aclrtGetDevice(&devId_);
     void* data = nullptr;
     diopiGetTensorData(const_cast<diopiTensorHandle_t>(tensor), &data);
+    // std::cout << __func__ << " data是否不为空: " << (data != nullptr) << std::endl;
 
     diopiSize_t shape;
     diopiGetTensorShape(tensor, &shape);
@@ -2440,11 +2446,6 @@ const at::Tensor buildATen(diopiConstTensorHandle_t tensor) {
     at::IntArrayRef atStrides(stride.data, stride.len);
 
     auto options = at::TensorOptions(c10::Device(atDevice, devId_)).dtype(atType);
-    int64_t numel = 0;
-    diopiGetTensorNumel(tensor, &numel);
-    if (numel <= 0) {
-        return at::Tensor();
-    }
 
     return fromPreAllocated(data, atDims, atStrides, options);
 }
@@ -2516,6 +2517,8 @@ at::Tensor wrapper__as_strided(const at::Tensor& self, at::IntArrayRef size, at:
     return impl::aten::as_strided(self, size, stride, storage_offset);
 }
 
+c10::Scalar wrapper___local_scalar_dense(const at::Tensor& self) { return at_npu::native::NPUNativeFunctions::_local_scalar_dense(self); }
+
 void ascend_diopi_fallback(const c10::OperatorHandle& op, at::DispatchKeySet dispatch_keys, torch::jit::Stack* stack) {
     const auto name = c10::toString(op.operator_name());
     std::cout << __FUNCTION__ << ": op " << name << " fallbacked, must be processed!!!" << std::endl;
@@ -2531,6 +2534,7 @@ TORCH_LIBRARY_IMPL(aten, XLA, m) {
     m.impl("reshape", TORCH_FN(wrapper__view));
     m.impl("view", TORCH_FN(wrapper__view));
     m.impl("as_strided", TORCH_FN(wrapper__as_strided));
+    m.impl("_local_scalar_dense", TORCH_FN(wrapper___local_scalar_dense));
 };
 
 TORCH_LIBRARY_IMPL(_, XLA, m) { m.fallback(torch::CppFunction::makeFromBoxedFunction<&ascend_diopi_fallback>()); }
