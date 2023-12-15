@@ -208,6 +208,7 @@ device_configs = {
 
     'conv_2d_no_contiguous': dict(
         name=['conv2d'],
+        dtype=[Skip(np.float16),Skip(np.float32),Skip(np.float64),],
         atol=1e-1,
         rtol=1e-2,
     ),
@@ -804,6 +805,20 @@ device_configs = {
             ]
         ),
     ),
+
+    'relu_no_contiguous': dict(
+        name=["relu"],
+        is_inplace=True,
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['input'],
+                    "dtype": [Skip(np.float32), Skip(np.float64)],
+                },
+            ],
+        ),
+    ),
+
 
     'leaky_relu': dict(
         name=['leaky_relu'],

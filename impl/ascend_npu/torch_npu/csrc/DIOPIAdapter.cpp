@@ -1,5 +1,6 @@
 #include "torch_npu/csrc/framework/DIOPIAdapter.h"
 
+#include <ATen/EmptyTensor.h>
 #include <ATen/native/CPUFallback.h>
 #include <ATen/record_function.h>
 #include <diopi/diopirt.h>
@@ -16,6 +17,8 @@ int current_device() {
     ::aclrtGetDevice(&devId_);
     return devId_;
 }
+
+inline bool enableDumpArgs() { return std::getenv("DIOPI_DEBUG_OP") != nullptr; }
 
 // check all at::ScalarType is not negative
 #define ENUM_PAIR_FUNC(_1, n) static_assert(static_cast<int64_t>(at::ScalarType::n) >= 0, #n " is negative");
@@ -589,8 +592,7 @@ void copy_d2d_by_memcpy(at::Tensor& dst, const at::Tensor& src, int64_t exceptSi
 at::Tensor NpuUtils::format_contiguous_add_copy_optimize(const at::Tensor& src) {
     // case1:tensor src is not contiguous
     if (!src.is_contiguous()) {
-        INTERFACE_NOT_IMPL
-        return src;
+        return src.contiguous();
     }
 #if 0
   // case2:meta data not match, sizes or strides of presentation
@@ -895,15 +897,17 @@ const char* markedOutputsErrorInfo =
 thread_local std::deque<at::Tensor> markedOutputs;
 void OpPreparation::markAsOutputForApplyTensor(at::Tensor& src) { markedOutputs.push_back(src); }
 
-at::Tensor empty_npu(at::IntArrayRef size, c10::optional<at::ScalarType> dtype_opt, c10::optional<at::Layout> layout_opt = c10::nullopt,
-                     c10::optional<at::Device> device_opt = c10::nullopt, c10::optional<bool> pin_memory_opt = c10::nullopt,
-                     c10::optional<at::MemoryFormat> memory_format_opt = c10::nullopt) {
+at::Tensor empty_npu(at::IntArrayRef size, c10::optional<at::ScalarType> dtype_opt, c10::optional<at::Layout> layout_opt, c10::optional<at::Device> device_opt,
+                     c10::optional<bool> pin_memory_opt, c10::optional<at::MemoryFormat> memory_format_opt) {
     TORCH_CHECK(dtype_opt.has_value());
     diopiSize_t sizeDiopi{size.data(), size.size()};
     diopiDtype_t dtypeDiopi = impl::aten::getDIOPITensorType(dtype_opt.value());
     diopiDevice_t deviceDiopi = diopi_device;
 
     diopiTensorHandle_t tensorDiopi = nullptr;
+    if (enableDumpArgs()) {
+        std::cout << __FUNCTION__ << ": diopiRequireTensor shape: " << size << ", dtype:" << dtype_opt.value() << std::endl;
+    }
     auto ret = diopiRequireTensor(context, &tensorDiopi, &sizeDiopi, nullptr, dtypeDiopi, deviceDiopi);
     TORCH_CHECK(diopiSuccess == ret);
     return impl::aten::buildATen(tensorDiopi);
@@ -911,6 +915,15 @@ at::Tensor empty_npu(at::IntArrayRef size, c10::optional<at::ScalarType> dtype_o
 
 at::Tensor empty_npu(at::IntArrayRef size, const at::TensorOptions& options) {
     return empty_npu(size, c10::make_optional(c10::typeMetaToScalarType(options.dtype())));
+}
+
+at::Tensor empty_strided_npu(c10::SymIntArrayRef size, c10::SymIntArrayRef stride, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
+                             c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+    at::TensorOptions options(dtype.value());
+    int64_t nbytes = at::detail::computeStorageNbytes(size, stride, options.dtype().itemsize()).as_int_unchecked();
+    int64_t numel = nbytes / options.dtype().itemsize();
+    auto out = at_npu::native::empty_npu({numel}, options);
+    return impl::aten::view(out, c10::asIntArrayRefUnchecked(size), c10::asIntArrayRefUnchecked(stride));
 }
 
 // used to apply output tensor
@@ -1768,7 +1781,7 @@ private:
     aclError InnerRun(const string& name, AclExecParam& params, bool sync, c10::SmallVector<int64_t, N>& sync_index,
                       c10::SmallVector<at::Tensor, N>& outputTensor);
 
-    void SetDeterministic() { OP_NOT_IMPL }
+    void SetDeterministic();
 
 private:
     string opName;
@@ -1915,8 +1928,6 @@ aclError OpCommandImpl::InnerRun(const string& name, AclExecParam& params, bool 
     return ret;
 }
 
-inline bool enableDumpArgs() { return std::getenv("DIOPI_DEBUG_OP") != nullptr; }
-
 std::tuple<aclTensorDesc*, aclDataBuffer*> CovertNPUTensorWithZeroDimToAclInput(const at::Tensor& tensor, const string& descName) {
     aclDataType aclDataType = CalcuOpUtil::ConvertToAclDataType(tensor.scalar_type());
     AclTensorDescMaker desc;
@@ -2006,6 +2017,17 @@ private:
 static std::unordered_map<std::thread::id, OpCommandImpls> opcommand_impls_map;
 static std::mutex map_mutex;
 static bool deterministicaclnn_oldstatus = false;
+
+void OpCommandImpl::SetDeterministic() {
+    auto deterministicAlgorithmsStatus = at::globalContext().deterministicAlgorithms();
+    if (deterministicaclnn_oldstatus != deterministicAlgorithmsStatus) {
+        NPU_CHECK_ERROR(AclSetCompileopt(aclCompileOpt::ACL_OP_DETERMINISTIC, deterministicAlgorithmsStatus ? "1" : "0"));
+        NPU_CHECK_ERROR(AclrtCtxSetSysParamOpt(aclSysParamOpt::ACL_OPT_DETERMINISTIC, deterministicAlgorithmsStatus ? 1 : 0));
+        // HcclConfigValue configValue = {deterministicAlgorithmsStatus ? 1 : 0};
+        // HCCL_CHECK_ERROR(hccl::HcclSetConfig(HcclConfig::HCCL_DETERMINISTIC, configValue));
+        deterministicaclnn_oldstatus = deterministicAlgorithmsStatus;
+    }
+}
 
 OpCommandImpls* OpCommandImpls::GetInstanceByTid(std::thread::id tid) {
     if (opcommand_impls_map.find(tid) == opcommand_impls_map.end()) {
@@ -2186,7 +2208,7 @@ OpCommand& OpCommand::InputWithoutContiguous(const at::Tensor& input, const stri
 // Output Tensor
 OpCommand& OpCommand::Output(at::Tensor& output, const string& descName, const c10::optional<aclFormat>& sensitive_format, const string& realType) {
     if (enableDumpArgs()) {
-        std::cout << aclCmd->GetName() << ":descName:" << descName << ",output:" << output.sizes() << "," << output.options() << std::endl;
+        std::cout << aclCmd->GetName() << ":descName:" << descName << ",output:" << impl::aten::dumpArgs(output) << std::endl;
     }
     if (resultTypeDefined == false && commonType.has_value() && commonType.value() != output.scalar_type()) {
         output = acl_op::npu_dtype_cast(output, commonType.value());
@@ -2226,7 +2248,8 @@ void OpCommand::Run() {
     aclCmd->SetEnginePriority();
     const string& op_name = aclCmd->GetName();
     aclCmd->Run(sync, sync_index, outputTensor);
-    if (sync) {
+    // todo: optimize performance here
+    if (sync || 1) {
         Sync();
     }
     aclCmd->releaseSource();
@@ -2242,8 +2265,7 @@ OpCommand& OpCommand::Sync(c10::SmallVector<int64_t, N>& index) {
 }
 
 OpCommand& OpCommand::Sync() {
-    auto stream = c10_npu::getCurrentNPUStream();
-    NPU_CHECK_ERROR(aclrtSynchronizeStream(stream));
+    c10_npu::getCurrentNPUStream().synchronize();
     return *this;
 }
 
@@ -2339,6 +2361,11 @@ NPUStream getCurrentNPUStream(c10::DeviceIndex device_index) {
 }
 
 NPUStream getCurrentSecondaryStream(c10::DeviceIndex device_index) { return getCurrentNPUStream(device_index); }
+
+void NPUStream::synchronize() const {
+    NPU_CHECK_ERROR(aclrtSynchronizeStream(aclStream_));
+    NPU_CHECK_ERROR(aclrtSynchronizeDevice());
+}
 
 }  // namespace c10_npu
 
@@ -2496,10 +2523,7 @@ void setCurCtx(diopiContextHandle_t ctx) {
     at_npu::native::markedOutputs.clear();
 }
 
-void unsetCurCtx() {
-    context = nullptr;
-    at_npu::native::markedOutputs.clear();
-}
+void unsetCurCtx() { context = nullptr; }
 
 }  // namespace aten
 
@@ -2514,7 +2538,20 @@ at::Tensor& wrapper__copy_(at::Tensor& self, const at::Tensor& src, bool non_blo
 at::Tensor wrapper__view(const at::Tensor& self, at::IntArrayRef size) { return impl::aten::view(self, size); }
 
 at::Tensor wrapper__as_strided(const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride, c10::optional<int64_t> storage_offset) {
-    return impl::aten::as_strided(self, size, stride, storage_offset);
+    return at_npu::native::NPUNativeFunctions::as_strided(self, size, stride, storage_offset.value_or(0));
+}
+
+const at::Tensor& wrapper__resize_(const at::Tensor& self, at::IntArrayRef size, c10::optional<at::MemoryFormat> memory_format) {
+    DEBUG_ARGS(self);
+    DEBUG_ARGS(size);
+    if (self.numel() >= c10::multiply_integers(size)) {
+        auto out = impl::aten::view(self, size);
+        self.set_(out.storage());
+    } else {
+        auto out = at_npu::native::empty_npu(size, self.options());
+        self.set_(out.storage());
+    }
+    return self;
 }
 
 c10::Scalar wrapper___local_scalar_dense(const at::Tensor& self) { return at_npu::native::NPUNativeFunctions::_local_scalar_dense(self); }
@@ -2523,6 +2560,15 @@ void ascend_diopi_fallback(const c10::OperatorHandle& op, at::DispatchKeySet dis
     const auto name = c10::toString(op.operator_name());
     std::cout << __FUNCTION__ << ": op " << name << " fallbacked, must be processed!!!" << std::endl;
     at::native::cpu_fallback(op, stack);
+}
+
+at::Tensor wrapper__contiguous(const at::Tensor& self, at::MemoryFormat memory_format) {
+    return at_npu::native::NPUNativeFunctions::contiguous(self, memory_format);
+}
+
+at::Tensor wrapper__empty_strided(c10::SymIntArrayRef size, c10::SymIntArrayRef stride, c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
+                                  c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+    return at_npu::native::empty_strided_npu(size, stride, dtype, layout, device, pin_memory);
 }
 
 }  // namespace
@@ -2534,6 +2580,9 @@ TORCH_LIBRARY_IMPL(aten, XLA, m) {
     m.impl("reshape", TORCH_FN(wrapper__view));
     m.impl("view", TORCH_FN(wrapper__view));
     m.impl("as_strided", TORCH_FN(wrapper__as_strided));
+    m.impl("resize_", TORCH_FN(wrapper__resize_));
+    m.impl("contiguous", TORCH_FN(wrapper__contiguous));
+    m.impl("empty_strided", TORCH_FN(wrapper__empty_strided));
     m.impl("_local_scalar_dense", TORCH_FN(wrapper___local_scalar_dense));
 };
 
