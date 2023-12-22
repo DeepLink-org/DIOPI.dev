@@ -2,18 +2,19 @@ cmake_minimum_required(VERSION 3.14)
 project(diopi_impl)
 
 option(TEST "Whether to compile DIOPI with runtime" OFF)
-option(DEBUG "whether to use debug" ON)
 option(DYLOAD "Whether to load so in runtime by dlopen" OFF)
 
 include_directories(SYSTEM "${PROJECT_SOURCE_DIR}/proto/include")
 include_directories("${PROJECT_SOURCE_DIR}/../adaptor/csrc")
+
+set(CMAKE_CXX_STANDARD 14)
 
 set (ADAPTOR_DIR "${CMAKE_SOURCE_DIR}/../adaptor")
 set (DIOPI_TEST_DIR "${CMAKE_SOURCE_DIR}/../diopi_test")
 
 if (TEST)
     # find the file Python.h and add it in the include path.
-    execute_process(COMMAND  sh -c "dirname $(find  $(dirname $(which python))/../ -name Python.h)" OUTPUT_VARIABLE PYTHON_INCLUDE_DIR)
+    execute_process(COMMAND  sh -c "dirname $(find  $(dirname $(which python))/../ -name Python.h)" OUTPUT_VARIABLE PYTHON_INCLUDE_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
     if ("${PYTHON_INCLUDE_DIR}" STREQUAL "")
         message(FATAL_ERROR "no Python.h is found")
     endif()
@@ -25,9 +26,8 @@ endif(TEST)
 option(ENABLE_COVERAGE "Use gcov" OFF)
 message(STATUS ENABLE_COVERAGE=${ENABLE_COVERAGE})
 
-if (DEBUG)
-    set(CMAKE_BUILD_TYPE "Debug")
-else()
+# the default is Release
+if(CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
@@ -53,8 +53,7 @@ list(APPEND IMPL_CAMB "CAMB" "camb")
 list(APPEND IMPL_ASCEND "ASCEND" "ascend")
 list(APPEND IMPL_SUPA "SUPA" "supa")
 list(APPEND IMPL_DROPLET "DROPLET" "droplet")
-
-add_definitions(-std=c++14)
+list(APPEND IMPL_KUNLUNXIN "KUNLUNXIN" "kunlunxin")
 
 if (${IMPL_OPT} IN_LIST IMPL_CUDA)
     add_subdirectory(cuda)
@@ -67,11 +66,13 @@ elseif (${IMPL_OPT} IN_LIST IMPL_CAMB_TORCH)
 elseif (${IMPL_OPT} IN_LIST IMPL_CAMB)
     add_subdirectory(camb)
 elseif (${IMPL_OPT} IN_LIST IMPL_ASCEND)
-        add_subdirectory(ascend)
+        add_subdirectory(ascend_npu)
 elseif (${IMPL_OPT} IN_LIST IMPL_SUPA)
     add_subdirectory(supa)
 elseif (${IMPL_OPT} IN_LIST IMPL_DROPLET)
     add_subdirectory(droplet)
+elseif (${IMPL_OPT} IN_LIST IMPL_KUNLUNXIN)
+    add_subdirectory(kunlunxin)
 else()
     message(WARNING "No implementation module is compiled, cmake requires option -DIMPL_OPT=CUDA or TORCH")
 endif()

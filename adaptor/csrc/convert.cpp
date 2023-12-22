@@ -105,6 +105,9 @@ bool isContiguous(diopiSize_t size, diopiSize_t strideDiopi, diopiMemoryFormat_t
     if (format == diopiMemoryFormat_t::Contiguous) {
         for (int64_t i = dim - 1; i >= 0; i--) {
             const auto &shapeD = shape[i];
+            if (shapeD == 0) {
+                return true;
+            }
             if (shapeD != 1) {
                 if (strides[i] != stride) {
                     return false;
@@ -203,7 +206,5 @@ const char *getDiopiErrorStr(diopiError_t err) {
     }
 }
 #undef DIOPI_ERROR_TO_STR
-
-TimeElapsedRecord TimeElapsed::timeElapsedRecord("op_time.dat");
 
 std::vector<diopiMemoryFormat_t> defaultFormats{};

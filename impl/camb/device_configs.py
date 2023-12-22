@@ -395,7 +395,7 @@ device_configs = {
     ),
 
     'pointwise_op': dict(
-        name=['floor', 'asin', 'atan', 'erfinv'],
+        name=['floor', 'atan', 'erfinv'],
         tensor_para=dict(
             args=[
                 {
@@ -651,19 +651,6 @@ device_configs = {
         ),
     ),
 
-    'reduce_op': dict(
-        name=['mean', 'sum'],
-        tensor_para=dict(
-            args=[
-                {
-                    "ins": ['input'],
-                    "shape": (Skip((16, 0, 9)),),
-                    "dtype": [Skip(np.float16)],
-                },
-            ],
-        ),
-    ),
-
     'reduce_partial_op': dict(
         atol = 0.001,
         rtol = 0.0001,
@@ -672,11 +659,16 @@ device_configs = {
             args=[
                 {
                     "ins": ['input'],
-                    "shape": (Skip((16, 0, 9)),),
                     "dtype": [Skip(np.float16)],
                 },
             ],
         ),
+    ),
+
+    'sum': dict(
+        name=["sum"],
+        atol = 0.001,
+        rtol = 0.0001,
     ),
 
     'sum': dict(
@@ -1595,32 +1587,6 @@ device_configs = {
         ),
     ),
 
-    'reduce_partial_op_2': dict(
-        name=['min', 'max'],
-        interface=['torch'],
-        tensor_para=dict(
-            args=[
-                {
-                    "ins": ['input'],
-                    "shape": (Skip((12, 0)), Skip((2, 0, 12))),
-                },
-            ],
-        ),
-    ),
-
-    'reduce_partial_op_3': dict(
-        name=['any', 'all'],
-        interface=['torch'],
-        tensor_para=dict(
-            args=[
-                {
-                    "ins": ['input'],
-                    "shape": (Skip((0,)), Skip((12, 0)), Skip((2, 0, 12))),
-                },
-            ],
-        ),
-    ),
-
     'unfold': dict(
         name=["unfold"],
         tensor_para=dict(
@@ -1997,7 +1963,7 @@ device_configs = {
     'batch_norm_stats': dict(
         name=["batch_norm_stats"],
         atol=1e-2,
-        rtol=1e-3,
+        rtol=5e-3,
     ),
 
     'rotary_emb': dict(

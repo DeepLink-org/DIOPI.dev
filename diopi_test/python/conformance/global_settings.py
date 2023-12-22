@@ -1,5 +1,21 @@
 # Copyright (c) 2023, DeepLink.
-from diopilib import Dtype
+import numpy as np
+
+default_cfg_dict = dict(
+    default_option=dict(
+        atol=1e-5,
+        rtol=1e-5,
+        atol_half=1e-2,
+        rtol_half=5e-2,
+        mismatch_ratio_threshold=1e-3,
+        memory_format="NCHW",
+        fp16_exact_match=False,
+        train=True,
+        gen_policy="dafault",
+    ),
+    # set log_level = "DEBUG" for debug infos
+    log_level="INFO"  # NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICA
+)
 
 
 class glob_var(object):
@@ -7,8 +23,9 @@ class glob_var(object):
         self.nhwc = nhwc
         self.nhwc_min_dim = nhwc_min_dim
         self.four_bytes = four_bytes
-        self.int_type = Dtype.int64
-        self.float_type = Dtype.float64
+        self.int_type = np.int64
+        self.float_type = np.float64
+        self.input_mismatch_ratio_threshold = 1e-3
         self._cur_test_func = ''
         self._func_status = {}
         self._debug_level = 0
@@ -25,8 +42,8 @@ class glob_var(object):
 
     def set_four_bytes(self):
         self.four_bytes = True
-        self.int_type = Dtype.int32
-        self.float_type = Dtype.float32
+        self.int_type = np.int32
+        self.float_type = np.float32
 
     def get_four_bytes(self):
         return self.four_bytes

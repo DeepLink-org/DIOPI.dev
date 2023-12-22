@@ -27,7 +27,7 @@ if (DYLOAD)
     set(IMPL_SRC wrap_func.cpp)
 endif()
 
-file(GLOB REAL_IMPL_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} functions/functions_mmcv/*.cu functions/functions_ext/*.cu functions/*.cpp)
+file(GLOB REAL_IMPL_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} functions/functions_mmcv/*.cu functions/functions_ext/*.cu functions/*.cpp helper.cpp)
 
 # adaptor
 set(USE_ADAPTOR ON)
@@ -101,6 +101,4 @@ endif()
 
 if (TEST)
     add_subdirectory(test)
-else ()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-version-script=${CMAKE_CURRENT_SOURCE_DIR}/diopi.map")
 endif()
