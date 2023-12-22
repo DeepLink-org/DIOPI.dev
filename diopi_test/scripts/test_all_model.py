@@ -66,7 +66,7 @@ def gen_case(partition, use_db, use_slurm, impl_folder, single_process):
         cmd = ''
         if use_slurm:
             cmd += f'srun --job-name {model}_gen_case -p {partition} '
-        cmd += f'python main.py --mode gen_case --model_name {model} --case_output_dir ./gencases/{model}_case'
+        cmd += f'python main.py --mode gen_case --model_name {model} '
         if impl_folder:
             cmd += f' --impl_folder {impl_folder}'
         if use_db:
@@ -83,7 +83,7 @@ def run_test(partition, device_type, device_num, use_db, pytest_args, use_slurm,
         cmd = ''
         if use_slurm:
             cmd += f'srun --job-name {model}_run_test -p {partition} --gres={device_type}:{device_num} '
-        cmd += f'python main.py --mode run_test --test_cases_path ./gencases/{model}_case'
+        cmd += f'python main.py --mode run_test --model_name {model} '
         if pytest_args:
             cmd += f' --pytest_args "{pytest_args}"'
         if use_db:
