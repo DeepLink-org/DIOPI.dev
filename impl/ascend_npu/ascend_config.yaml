@@ -215,3 +215,5 @@ ascend_npu:
 - diopiMaxPool2dWithIndices
 - diopiRotaryEmbedding
 - diopiCol2Im
+- diopiMultiHeadAttnForward
+- diopiMultiHeadAttnBackward

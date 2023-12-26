@@ -63,6 +63,46 @@ DIOPI_API diopiError_t diopiRMSNormBackward(diopiContextHandle_t ctx, diopiTenso
                                             diopiSize_t normalized_shape, double eps);
 
 /**
+ * @brief Compute the multi head attention defined in the article:
+ * @param[in] ctx The diopi context.
+ * @param[in] query Query tensor.
+ * @param[in] key Key tensor.
+ * @param[in] value Value tensor.
+ * @param[in]
+ * @param[in]
+ * @param[in]
+ * @param[in]
+ * @param[in]
+ * @param[in]
+ *
+ * @param[out] out mha result.
+ * @param[out] dropout_mask .
+ * @param[out]
+ *
+ *
+ *
+ */
+DIOPI_API diopiError_t diopiMultiHeadAttnForward(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiTensorHandle_t dropoutMask,
+                                                 diopiTensorHandle_t queryRes, diopiTensorHandle_t keyRes, diopiTensorHandle_t valueRes,
+                                                 diopiTensorHandle_t attnScores, diopiTensorHandle_t attnRes, diopiTensorHandle_t queryContext,
+                                                 diopiConstTensorHandle_t query, diopiConstTensorHandle_t key, diopiConstTensorHandle_t value,
+                                                 diopiConstTensorHandle_t queryWeight, diopiConstTensorHandle_t keyWeight, diopiConstTensorHandle_t valueWeight,
+                                                 diopiConstTensorHandle_t attnMask, diopiConstTensorHandle_t outProjWeight, diopiConstTensorHandle_t queryBias,
+                                                 diopiConstTensorHandle_t keyBias, diopiConstTensorHandle_t valueBias, diopiConstTensorHandle_t outProjBias,
+                                                 diopiConstTensorHandle_t dropoutMaskInput, const int64_t attnHeadNum, const int64_t attnHeadDim,
+                                                 const int64_t srcLen, const int64_t tgtLen, const double dropoutProb, const bool softmaxUseFloat);
+
+DIOPI_API diopiError_t diopiMultiHeadAttnBackward(
+    diopiContextHandle_t ctx, diopiTensorHandle_t queryWeightGrad, diopiTensorHandle_t keyWeightGrad, diopiTensorHandle_t valueWeightGrad,
+    diopiTensorHandle_t outProjWeightGrad, diopiTensorHandle_t queryGrad, diopiTensorHandle_t keyGrad, diopiTensorHandle_t valueGrad,
+    diopiTensorHandle_t queryBiasGrad, diopiTensorHandle_t keyBiasGrad, diopiTensorHandle_t valueBiasGrad, diopiTensorHandle_t outProjBiasGrad,
+    diopiConstTensorHandle_t query, diopiConstTensorHandle_t key, diopiConstTensorHandle_t value, diopiConstTensorHandle_t queryWeight,
+    diopiConstTensorHandle_t keyWeight, diopiConstTensorHandle_t valueWeight, diopiConstTensorHandle_t outProjWeight, diopiConstTensorHandle_t queryBias,
+    diopiConstTensorHandle_t keyBias, diopiConstTensorHandle_t valueBias, diopiConstTensorHandle_t outProjBias, diopiConstTensorHandle_t queryRes,
+    diopiConstTensorHandle_t keyRes, diopiConstTensorHandle_t valueRes, diopiConstTensorHandle_t attnScores, diopiConstTensorHandle_t attnRes,
+    diopiConstTensorHandle_t queryContext, diopiConstTensorHandle_t outGrad, diopiConstTensorHandle_t dropoutMask, const int64_t attnHeadNum,
+    const int64_t attnHeadDim, const int64_t srcLen, const int64_t tgtLen, const double dropoutProb, const bool softmaxUseFloat);
+/**
  * @brief Compute the forward pass for MultiheadAttention.
  * @param[in] ctx The diopi context.
  * @param[in] q Query tensor. shape = [batch_size, q_seq_len, head_num, head_dim]. type = [float32, float16, float64].
