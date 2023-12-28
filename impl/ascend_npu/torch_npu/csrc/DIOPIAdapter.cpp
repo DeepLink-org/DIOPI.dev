@@ -2729,7 +2729,7 @@ at::Generator buildATen(diopiGeneratorHandle_t generator) {
 }
 
 at::Tensor viewStorage(const at::Tensor input, const c10::IntArrayRef sizes, const c10::IntArrayRef strides, const int64_t storageOffset) {
-    // TORCH_CHECK(c10::multiply_integers(sizes) <= input.numel());
+    TORCH_CHECK(c10::multiply_integers(sizes) <= input.numel());
     TORCH_CHECK(!input.is_cpu());
     std::vector<int64_t> stridesVec(sizes.size(), 1);
     if (strides.size() > 0) {
@@ -2779,8 +2779,7 @@ at::Tensor& wrapper__copy_(at::Tensor& self, const at::Tensor& src, bool non_blo
 at::Tensor wrapper__view(const at::Tensor& self, at::IntArrayRef size) { return impl::aten::viewStorage(self, size); }
 
 at::Tensor wrapper__as_strided(const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride, c10::optional<int64_t> storage_offset) {
-    // return at_npu::native::NPUNativeFunctions::as_strided(self, size, stride, storage_offset.value_or(0));
-    return impl::aten::viewStorage(self, size, stride, storage_offset.value_or(0));
+    return at_npu::native::NPUNativeFunctions::as_strided(self, size, stride, storage_offset.value_or(0));
 }
 
 const at::Tensor& wrapper__resize_(const at::Tensor& self, at::IntArrayRef size, c10::optional<at::MemoryFormat> memory_format) {
@@ -2892,6 +2891,8 @@ at::Tensor& wrapper_Scalar_masked_fill_(at::Tensor& self, const at::Tensor& mask
 
 at::Tensor wrapper__repeat(const at::Tensor& self, at::IntArrayRef repeats) { return acl_op::repeat(self, repeats); }
 
+at::Scalar wrapper___local_scalar_dense(const at::Tensor& self) { return at_npu::native::NPUNativeFunctions::_local_scalar_dense(self); }
+
 at::Tensor wrapper__transpose(const at::Tensor& self, int64_t dim0, int64_t dim1) {
     int64_t inputSize = self.dim();
     if (dim0 < 0) dim0 = dim0 + inputSize;
@@ -2935,6 +2936,7 @@ TORCH_LIBRARY_IMPL(aten, XLA, m) {
     m.impl("masked_fill_.Scalar", TORCH_FN(wrapper_Scalar_masked_fill_));
     m.impl("repeat", TORCH_FN(wrapper__repeat));
     m.impl("transpose.int", TORCH_FN(wrapper__transpose));
+    m.impl("_local_scalar_dense", TORCH_FN(wrapper___local_scalar_dense));
 };
 
 TORCH_LIBRARY_IMPL(_, XLA, m) { m.fallback(torch::CppFunction::makeFromBoxedFunction<&ascend_diopi_fallback>()); }
