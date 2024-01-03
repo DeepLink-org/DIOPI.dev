@@ -377,7 +377,7 @@ device_configs = {
     ),
 
     'pointwise_op': dict(
-        name=['erf', 'erfinv', 'asin', 'ceil', 'atan'],
+        name=['erf', 'erfinv', 'asin', 'ceil'],
         tensor_para=dict(
             args=[
                 {
@@ -389,7 +389,7 @@ device_configs = {
     ),
 
     'pointwise_op_int_without_inplace': dict(
-        name=['erf', 'asin', 'atan'],
+        name=['erf', 'asin'],
         tensor_para=dict(
             args=[
                 {
@@ -401,7 +401,7 @@ device_configs = {
     ),
 
     'pointwise_op_uint8': dict(
-        name=['erf', 'asin', 'atan'],
+        name=['erf', 'asin'],
         tensor_para=dict(
             args=[
                 {
@@ -413,7 +413,7 @@ device_configs = {
     ),
 
     'pointwise_op_bool': dict(
-        name=['erf', 'asin', 'atan'],
+        name=['erf', 'asin'],
         tensor_para=dict(
             args=[
                 {
@@ -584,18 +584,6 @@ device_configs = {
         atol=1e-3,
         rtol=1e-3,
         name=['sum'],
-    ),
-
-    'reduce_partial_op_1': dict(
-        name=['std'],
-        tensor_para=dict(
-            args=[
-                {
-                    "ins": ['input'],
-                    "dtype": [Skip(np.float32),Skip(np.float64),Skip(np.float16),],
-                },
-            ]
-        ),
     ),
 
     'mse_loss': dict(
