@@ -129,38 +129,38 @@ class CollectCase(object):
                 for tol in rule["tol"]:
                     case_cfg[tol] = rule["tol"][tol]
 
-            # skip
-            if "skip" not in rule.keys():
-                return False
+            # # skip
+            # if "skip" not in rule.keys():
+            #     return False
 
-            # 'para'
-            if "para" in rule["skip"].keys() and "para" in case_cfg.keys():
-                para_case = case_cfg["para"]
-                para_rule = rule["skip"]["para"]
+            # # 'para'
+            # if "para" in rule["skip"].keys() and "para" in case_cfg.keys():
+            #     para_case = case_cfg["para"]
+            #     para_rule = rule["skip"]["para"]
 
-                for pk, pv in para_case.items():
-                    if pk in para_rule.keys() and pv in para_rule[pk]:
-                        return True
-            if (
-                "tensor_para" in rule["skip"].keys() and "tensor_para" in case_cfg.keys()
-            ):
-                # 'tensor_para
-                tp_case_args = case_cfg["tensor_para"]["args"]  # this is a list
-                tp_rule_args = rule["skip"]["tensor_para"]  # this is a dict
-                for ins in tp_case_args:
-                    if ins["ins"] in tp_rule_args.keys():
-                        for fk in tp_rule_args[ins["ins"]].keys():
-                            ins_fk_tmp = (
-                                ins[fk] if not isinstance(ins[fk], list) else ins[fk][0]
-                            )
-                            if ins_fk_tmp in tp_rule_args[ins["ins"]][fk]:
-                                return True
-            # dtype
-            if "dtype" in rule["skip"].keys():
-                tp_case_args = case_cfg["tensor_para"]["args"]
-                for ins in tp_case_args:
-                    if ins["dtype"] in rule["skip"]["dtype"]:
-                        return True
+            #     for pk, pv in para_case.items():
+            #         if pk in para_rule.keys() and pv in para_rule[pk]:
+            #             return True
+            # if (
+            #     "tensor_para" in rule["skip"].keys() and "tensor_para" in case_cfg.keys()
+            # ):
+            #     # 'tensor_para
+            #     tp_case_args = case_cfg["tensor_para"]["args"]  # this is a list
+            #     tp_rule_args = rule["skip"]["tensor_para"]  # this is a dict
+            #     for ins in tp_case_args:
+            #         if ins["ins"] in tp_rule_args.keys():
+            #             for fk in tp_rule_args[ins["ins"]].keys():
+            #                 ins_fk_tmp = (
+            #                     ins[fk] if not isinstance(ins[fk], list) else ins[fk][0]
+            #                 )
+            #                 if ins_fk_tmp in tp_rule_args[ins["ins"]][fk]:
+            #                     return True
+            # # dtype
+            # if "dtype" in rule["skip"].keys():
+            #     tp_case_args = case_cfg["tensor_para"]["args"]
+            #     for ins in tp_case_args:
+            #         if ins["dtype"] in rule["skip"]["dtype"]:
+            #             return True
             return False
 
         for key, item in self._diopi_items.items():
