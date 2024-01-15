@@ -54,6 +54,11 @@ public:
         assert(mallocFn_);
         ptr_ = mallocFn_(nbytes);
     }
+    
+    Storage(malloc_func_t mallocFn, free_func_t freeFn, int64_t nbytes, const void* ptr) : mallocFn_(mallocFn), freeFn_(freeFn), nbytes_(nbytes), ptr_(ptr) {
+        assert(freeFn_);
+        assert(mallocFn_);
+    }
 
     ~Storage() {
         freeFn_(ptr_);
