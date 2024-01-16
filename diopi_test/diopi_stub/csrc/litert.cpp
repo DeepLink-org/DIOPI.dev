@@ -146,13 +146,13 @@ diopiTensor::diopiTensor(const diopiSize_t* shape, const diopiSize_t* stride, di
     // const int64_t nbytes = numel_ * itemsize(dtype);
     if (device_ == diopi_host) {
         if (stride != nullptr && stride->len < 0 && stride->data != nullptr) {
-            storage_ = std::make_shared<Storage>(hostMalloc, hostFree, nbytes, reinterpret_cast<const void*>(stride->data));
+            storage_ = std::make_shared<Storage>(hostMalloc, hostFree, nbytes, const_cast<void*>(reinterpret_cast<const void*>(stride->data)));
         } else {
             storage_ = std::make_shared<Storage>(hostMalloc, hostFree, nbytes);
         }
     } else {
         if (stride != nullptr && stride->len < 0 && stride->data != nullptr) {
-            storage_ = std::make_shared<Storage>(device_malloc, device_free, nbytes, reinterpret_cast<const void*>(stride->data));
+            storage_ = std::make_shared<Storage>(device_malloc, device_free, nbytes, const_cast<void*>(reinterpret_cast<const void*>(stride->data)));
         } else {
             storage_ = std::make_shared<Storage>(device_malloc, device_free, nbytes);
         }
