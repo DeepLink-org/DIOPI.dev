@@ -297,6 +297,11 @@ class CustomizedTest(object):
             inoutput[:size] += val
         return inoutput
 
+    def update_padding_count(total_padding_count, input_lengths, max_input_length, batch_size):
+        for i in range(batch_size):
+            total_padding_count[i] = max_input_length - input_lengths[i]
+        return total_padding_count
+
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data

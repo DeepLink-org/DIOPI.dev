@@ -5302,7 +5302,14 @@ def context_attention(q, k, v, out, b_start_loc, b_seq_len, max_input_len):
 def plus_scalar_inp(inoutput, val, size):
     call = "diopiPlusScalarInp"
     func = check_function(call)
-    
     ret = func(inoutput.context(), inoutput, val, size)
     check_returncode(ret)
     return inoutput
+
+def update_padding_count(total_padding_count, input_lengths, max_input_length, batch_size):
+    call = "diopiUpdatePaddingCount"
+    func = check_function(call)
+    
+    ret = func(total_padding_count.context(), total_padding_count, input_lengths, max_input_length, batch_size)
+    check_returncode(ret)
+    return total_padding_count

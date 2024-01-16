@@ -8453,21 +8453,46 @@ diopi_configs = {
         )
     ),
     
-    'plus_scalar_inp' : dict(
+'plus_scalar_inp' : dict(
         name=['plus_scalar_inp'],
         interface=['CustomizedTest'],
         para=dict(
-            val = [-1, ],
-            size = [5, ]
+            val = [-1, 3],
+            size = [5, 10]
         ),
         tensor_para=dict(
             args=[
                 {
                     "ins": ['inoutput'],
-                    "value": ([0, 1, 2, 3, 4, 5], ),
+                    "value": ([0, 1, 2, 3, 4, 5, 6], [6, 5, 4, 3, 2, 1, 0, -1]),
                     "dtype": [np.int32, np.int64],
                     "gen_policy": "gen_tensor_by_value"
                 },
+            ]
+        )
+    ),
+    
+    'update_padding_count' : dict(
+        name=['update_padding_count'],
+        interface=['CustomizedTest'],
+        para=dict(
+            max_input_length = [10, 5],
+            batch_size = [2, 10]
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['total_padding_count'],  
+                    "value": ([0, 0], [0, 1, 2, 3, 4, 5, 4, 3, 2, 1]),
+                    "dtype": [np.int32, np.int64],
+                    "gen_policy": "gen_tensor_by_value"
+                },
+                {
+                    "ins": ['input_lengths'],
+                    "value": ([3, 4], [0, 1, 2, 3, 4, 5, 4, 3, 2, 1]),
+                    "dtype": [np.int32, np.int64],
+                    "gen_policy": "gen_tensor_by_value"
+                }
             ]
         )
     )

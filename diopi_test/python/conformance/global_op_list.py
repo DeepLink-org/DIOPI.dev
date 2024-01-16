@@ -76,4 +76,6 @@ ops_with_states = {"batch_norm": {"running_mean", "running_var"},
                    "uniform": {"input"},
                    "normal_": {"input"},
                    "bernoulli": {"input"},  # compared in manual_test
+                   "update_padding_count": {"total_padding_count"},
+                   "plus_scalar_inp": {"inoutput"}
                    }
