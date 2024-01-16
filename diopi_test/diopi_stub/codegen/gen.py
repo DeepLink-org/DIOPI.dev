@@ -172,6 +172,10 @@ def gen_functions(options, functions_fm):
         content_ext = f.readlines()
     exports = get_export(content_ext, ft, exports)
 
+    with open(os.path.join(_cur_dir, options.get('source_dir'), 'functions_lmdeploy.h'), 'r', encoding='utf8')as f:
+        content_lmdeploy = f.readlines()
+    exports = get_export(content_lmdeploy, ft, exports)
+    
     functions_fm.write("export_functions.cpp", OT.operators_template, env=dict(export_functions=exports))
 
 
