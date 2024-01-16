@@ -21,7 +21,6 @@
 #define FLT_MIN __FLT_MIN__
 #define FLT_MAX __FLT_MAX__
 
-#include "../context.h"
 #include "../helper.hpp"
 #include "../vision_kernel.h"
 
@@ -36,15 +35,13 @@ DIOPI_API diopiError_t diopiLmdeployCopyH2D(diopiContextHandle_t ctx, diopiTenso
     if (dst_dev != diopiDevice_t::diopi_device || src_dev != diopiDevice_t::diopi_host) {
         return diopiErrorOccurred;
     }
-
-    impl::aten::setCurCtx(ctx);
+    impl::aten::setCurStream(ctx);
     at::Tensor atDest = impl::aten::buildATen(dst);
     at::Tensor atSrc = impl::aten::buildATen(src);
     // Set non_blocking true to avoid stream sync thus improving performance.
     // The data is not ready when diopiCopyInp returns.
     // If you need to use it immediately, please call cudaStreamSynchronize first.
     at::native::copy_(atDest, atSrc, async);
-    impl::aten::unsetCurCtx();
     return diopiSuccess;
 }
 
@@ -57,14 +54,13 @@ DIOPI_API diopiError_t diopiLmdeployCopyD2H(diopiContextHandle_t ctx, diopiTenso
         return diopiErrorOccurred;
     }
 
-    impl::aten::setCurCtx(ctx);
+    impl::aten::setCurStream(ctx);
     at::Tensor atDest = impl::aten::buildATen(dst);
     at::Tensor atSrc = impl::aten::buildATen(src);
     // Set non_blocking true to avoid stream sync thus improving performance.
     // The data is not ready when diopiCopyInp returns.
     // If you need to use it immediately, please call cudaStreamSynchronize first.
     at::native::copy_(atDest, atSrc, async);
-    impl::aten::unsetCurCtx();
     return diopiSuccess;
 }
 
@@ -77,14 +73,13 @@ DIOPI_API diopiError_t diopiLmdeployCopyD2D(diopiContextHandle_t ctx, diopiTenso
         return diopiErrorOccurred;
     }
 
-    impl::aten::setCurCtx(ctx);
+    impl::aten::setCurStream(ctx);
     at::Tensor atDest = impl::aten::buildATen(dst);
     at::Tensor atSrc = impl::aten::buildATen(src);
     // Set non_blocking true to avoid stream sync thus improving performance.
     // The data is not ready when diopiCopyInp returns.
     // If you need to use it immediately, please call cudaStreamSynchronize first.
     at::native::copy_(atDest, atSrc, async);
-    impl::aten::unsetCurCtx();
     return diopiSuccess;
 }
 
