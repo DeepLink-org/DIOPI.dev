@@ -5296,3 +5296,11 @@ def context_attention(q, k, v, out, b_start_loc, b_seq_len, max_input_len):
     )
     check_returncode(ret)
     return out
+
+def plus_scalar_inp(inoutput, val, size):
+    call = "diopiPlusScalarInp"
+    func = check_function(call)
+    
+    ret = func(inoutput.context(), inoutput, val, size)
+    check_returncode(ret)
+    return inoutput

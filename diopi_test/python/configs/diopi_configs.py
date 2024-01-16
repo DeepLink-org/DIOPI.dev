@@ -8346,4 +8346,23 @@ diopi_configs = {
             ]
         )
     ),
+    
+    'plus_scalar_inp' : dict(
+        name=['plus_scalar_inp'],
+        interface=['CustomizedTest'],
+        para=dict(
+            val = [-1, ],
+            size = [5, ]
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['inoutput'],
+                    "value": ([0, 1, 2, 3, 4, 5], ),
+                    "dtype": [np.int32, np.int64],
+                    "gen_policy": "gen_tensor_by_value"
+                },
+            ]
+        )
+    )
 }
