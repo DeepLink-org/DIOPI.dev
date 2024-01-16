@@ -47,9 +47,10 @@ private:
     free_func_t freeFn_;
     int64_t nbytes_;
     void* ptr_;
+    bool pre_allocated_;
 
 public:
-    Storage(malloc_func_t mallocFn, free_func_t freeFn, int64_t nbytes) : mallocFn_(mallocFn), freeFn_(freeFn), nbytes_(nbytes) {
+    Storage(malloc_func_t mallocFn, free_func_t freeFn, int64_t nbytes) : mallocFn_(mallocFn), freeFn_(freeFn), nbytes_(nbytes), pre_allocated_(false) {
         assert(freeFn_);
         assert(mallocFn_);
         const int64_t MALLOC_BYTES_ALIGN = 1024;
@@ -57,13 +58,15 @@ public:
         ptr_ = mallocFn_(realNbytes);
     }
     
-    Storage(malloc_func_t mallocFn, free_func_t freeFn, int64_t nbytes, void* ptr) : mallocFn_(mallocFn), freeFn_(freeFn), nbytes_(nbytes), ptr_(ptr) {
+    Storage(malloc_func_t mallocFn, free_func_t freeFn, int64_t nbytes, void* ptr) : mallocFn_(mallocFn), freeFn_(freeFn), nbytes_(nbytes), ptr_(ptr), pre_allocated_(true) {
         assert(freeFn_);
         assert(mallocFn_);
     }
 
     ~Storage() {
-        freeFn_(ptr_);
+        if (!pre_allocated_) {
+            freeFn_(ptr_);
+        }
         ptr_ = nullptr;
         nbytes_ = 0;
     }

@@ -124,7 +124,6 @@ diopiTensor::diopiTensor(const diopiSize_t* shape, const diopiSize_t* stride, di
                          const void* src)
     : dtype_(dtype), device_(device), context_(context) {
     assert(shape);
-
     shape_.resize(shape->len);
     stride_.resize(shape->len);
     int64_t strideTemp = 1;
@@ -133,7 +132,7 @@ diopiTensor::diopiTensor(const diopiSize_t* shape, const diopiSize_t* stride, di
     for (int64_t i = shape->len - 1; i >= 0; --i) {
         shape_[i] = shape->data[i];
         numel_ *= shape->data[i];
-        if (stride != nullptr && stride->data != nullptr) {
+        if (stride != nullptr && stride->len >= 0 && stride->data != nullptr) {
             stride_[i] = stride->data[i];
         } else {
             stride_[i] = strideTemp;
