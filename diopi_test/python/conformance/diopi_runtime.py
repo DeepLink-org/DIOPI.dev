@@ -181,6 +181,22 @@ def compute_nhwc_stride(size, itemsize=1, name=None):
         return compute_nhwc_stride_3d(size, itemsize)
 
 
+def set_nhwc(tensor_nchw, name_2d_3d):
+    ndim = tensor_nchw.ndim
+    if ndim == 3:
+        axis = (1, 2, 0)
+    elif ndim == 4 and name_2d_3d == '3d':
+        axis = (1, 2, 3, 0)
+    elif ndim == 4:
+        axis = (0, 2, 3, 1)
+    elif ndim == 5:
+        axis = (0, 2, 3, 4, 1)
+    nhwc_out = np.transpose(tensor_nchw, axis).copy()
+    nhwc_out.shape = tensor_nchw.shape
+    nhwc_out.strides = compute_nhwc_stride(tensor_nchw.shape, tensor_nchw.itemsize, name_2d_3d)
+    return nhwc_out
+
+
 def diopi_rt_init():
     init_library()
 
@@ -233,6 +249,9 @@ class Tensor(diopiTensor):
 
         if isinstance(size, (tuple, list)):
             size = Sizes(list(size))
+
+        if isinstance(stride, (tuple, list)):
+            stride = Sizes(list(stride))
 
         if data_ptr is None:
             diopiTensor.__init__(self, size, stride, dtype, device, context)
@@ -310,22 +329,14 @@ class Tensor(diopiTensor):
         return tr
 
     def numpy(self) -> np.ndarray:
+        if all(x == 0 for x in self.size().data) and self.numel() == 0:
+            # cases when shape all 0, but not include the scalar tensor
+            return np.empty(self.size().data, to_numpy_dtype(self.get_dtype()))
         data = np.empty((1,), to_numpy_dtype(self.get_dtype()))
         element_size = data.itemsize
-        sumsize = int(
-            sum(
-                [
-                    (s - 1) * st
-                    for s, st in zip(
-                        list(self.size().data),
-                        [
-                            int(stride * element_size)
-                            for stride in self.get_stride().data
-                        ],
-                    )
-                ]
-            ) / element_size + 1
-        )
+        stride_scaled = [int(stride * element_size) for stride in self.get_stride().data]
+        sum_of_products = sum((s - 1) * st for s, st in zip(self.size().data, stride_scaled))
+        sumsize = int(sum_of_products / element_size) + 1
         darray = np.empty(sumsize, to_numpy_dtype(self.get_dtype()))
         PyCapsule_Destructor = ctypes.CFUNCTYPE(None, ctypes.py_object)
         PyCapsule_New = ctypes.pythonapi.PyCapsule_New

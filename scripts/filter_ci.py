@@ -9,6 +9,8 @@ def get_run_result(pr_number):
         'ASCEND': False,
         'TOPSRIDER': False,
         'SUPA': False,
+        'KUNLUNXIN': False,
+        'GENDATA': False,
     }
 
     repository = os.environ.get("GITHUB_REPOSITORY")
@@ -19,6 +21,8 @@ def get_run_result(pr_number):
     response = requests.get(api_url, headers=headers)
     if response.status_code == 200:
         pr_files = response.json()
+        if "diopi_configs.py" in str(pr_files):
+            run_result['GENDATA'] = True
         norunpaths = ["impl/camb_pytorch","impl/cuda"]
         for file in pr_files:
             filenames = file["filename"]
@@ -37,6 +41,8 @@ def get_run_result(pr_number):
                     run_result['TOPSRIDER'] = True
                 elif "impl/supa" in filenames:
                     run_result['SUPA'] = True
+                elif "impl/kunlunxin" in filenames:
+                    run_result['KUNLUNXIN'] = True
                 elif "impl/droplet" in filenames:
                     run_result['droplet'] = True
                 elif any(subpath in filenames for subpath in norunpaths):
@@ -47,6 +53,7 @@ def get_run_result(pr_number):
                     run_result['ASCEND'] = True
                     run_result['TOPSRIDER'] = True
                     run_result['SUPA'] = True
+                    run_result['KUNLUNXIN'] = True
                     run_result['droplet'] = True
                     break
 
@@ -56,6 +63,7 @@ def get_run_result(pr_number):
                 run_result['ASCEND'] = True
                 run_result['TOPSRIDER'] = True
                 run_result['SUPA'] = True
+                run_result['KUNLUNXIN'] = True
                 run_result['droplet'] = True
                 break
     else:
@@ -70,7 +78,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     pr_number = args.prnumber
     if pr_number == 0:
-        RUN_RESULT="NV_CAMB_ASCEND_TOPSRIDER_SUPA_DROPLET"
+        RUN_RESULT="NV_CAMB_ASCEND_TOPSRIDER_SUPA_KUNLUNXIN_DROPLET"
     else:
         RUN_RESULT=get_run_result(pr_number)
     print(RUN_RESULT)

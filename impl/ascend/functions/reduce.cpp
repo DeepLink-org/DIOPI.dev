@@ -144,5 +144,55 @@ diopiError_t diopiAny(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiCo
     return diopiSuccess;
 }
 
+diopiError_t diopiProd(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, const int64_t* dim) {
+    AscendTensor inputAt(input);
+    if (inputAt.numel() == 0) {
+        // this is consistent with Torch when numel==0
+        diopiScalar_t scalar = constructDiopiScalarT(diopi_dtype_float32, 1.0);
+        diopiFill(ctx, out, &scalar);
+        return diopiSuccess;
+    }
+
+    bool keepdim = true;
+    diopiSize_t inputS, outS;
+    diopiGetTensorShape(input, &inputS);
+    diopiGetTensorShape(out, &outS);
+    if (inputS.len != outS.len) {
+        keepdim = false;
+    }
+
+    std::vector<int64_t> dimVector = nullptr == dim ? std::vector<int64_t>{0} : std::vector<int64_t>{*dim};
+
+    diopiDtype_t inputDtype, outDtype, highDtype;
+    diopiGetTensorDtype(input, &inputDtype);
+    diopiGetTensorDtype(out, &outDtype);
+    diopiTensorHandle_t inputTemp;
+    diopiTensorHandle_t outTemp;
+
+    if (isIntegralTypeWithBool(inputDtype)) {
+        highDtype = diopi_dtype_int64;
+    } else {
+        highDtype = outDtype;
+    }
+
+    if (inputDtype != outDtype) {
+        makeTensorLike(ctx, &inputTemp, input, highDtype);
+        makeTensorLike(ctx, &outTemp, out, highDtype);
+        diopiCastDtype(ctx, inputTemp, input);
+    } else {
+        inputTemp = const_cast<diopiTensorHandle_t>(input);
+        outTemp = out;
+    }
+
+    // the output of Acl_OP ReduceProd has the same dtype with input
+    // but the output dtype of diopiProd is determined by parameter dtype passed by upstream
+    AclOpRunner<2, 1>("ReduceProd", ctx).addInput(inputTemp).addConstInput(dimVector).setAttr("keep_dims", keepdim).addOutput(outTemp).run();
+
+    if (inputDtype != outDtype) {
+        diopiCastDtype(ctx, out, outTemp);
+    }
+    return diopiSuccess;
+}
+
 }  // namespace ascend
 }  // namespace impl

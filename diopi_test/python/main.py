@@ -5,9 +5,7 @@ import os
 import sys
 import pytest
 
-from conformance.global_op_list import nhwc_op
-from conformance.global_op_list import dtype_op, dtype_out_op
-from conformance.utils import is_ci, error_counter, write_report
+from conformance.global_op_list import nhwc_op, dtype_op, dtype_out_op
 from conformance.utils import logger
 from conformance.global_settings import glob_vars
 from conformance.model_list import model_list, model_op_list
@@ -33,7 +31,7 @@ def parse_args():
         "--mode",
         type=str,
         default="test",
-        help="running mode, available options: gen_data, run_test and utest",
+        help="running mode, available options: gen_data, gen_case, run_test and utest",
     )
     general_args.add_argument(
         "--use_db", action="store_true", help="use database to save test data"
@@ -111,6 +109,12 @@ def parse_args():
         nargs="*",
         help="The dtype in filter_dtype will not be processed",
     )
+    run_test_args.add_argument(
+        "--test_result_path",
+        type=str,
+        default="report.xlsx",
+        help="excel report save path",
+    )
 
     args = parser.parse_args()
     return args
@@ -118,6 +122,9 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+
+    if not os.path.exists(cache_path):
+        os.makedirs(cache_path)
 
     glob_vars.use_db = args.use_db
     from conformance.db_operation import db_conn, BenchMarkCase, DeviceCase
@@ -165,7 +172,12 @@ if __name__ == "__main__":
         db_case_items = gen_case(cache_path, cur_dir, args.model_name, args.fname, args.impl_folder, args.case_output_dir)
         db_conn.insert_device_case(db_case_items)
     elif args.mode == "run_test":
-        pytest_args = [args.test_cases_path]
+        if args.test_cases_path == "":
+            model_name = args.model_name.lower() if args.model_name else "diopi"
+            test_cases_path = os.path.join(args.case_output_dir, model_name + "_case")
+        else:
+            test_cases_path = args.test_cases_path
+        pytest_args = [test_cases_path]
         if args.filter_dtype:
             filter_dtype_str = " and ".join(
                 [f"not {dtype}" for dtype in args.filter_dtype]
@@ -175,6 +187,8 @@ if __name__ == "__main__":
             pytest_args.extend(
                 ["--report=report.html", "--title=DIOPI Test", "--template=2"]
             )
+        if args.test_result_path:
+            pytest_args.append(f"--test_result_path={args.test_result_path}")
         if args.pytest_args is not None:
             pytest_args.extend(args.pytest_args.split())
         pytest_args = ['--cache-clear', '--disable-warnings'] + pytest_args

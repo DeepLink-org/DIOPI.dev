@@ -17,34 +17,21 @@ def gen_case(cache_path=".", cur_dir="", model_name="", fname="", impl_folder=""
         logger.info(
             f"the op list of {model_name}: {model_op_list[model_name]}"
         )
-        diopi_configs = eval(f"model_config.{model_name}_config")
         diopi_case_item_file = model_name + "_" + diopi_case_item_file
         device_case_item_file = model_name + "_" + device_case_item_file
     else:
-        # set a prefix for dat save path like: data/diopi/inputs
         model_name = "diopi"
-        from diopi_configs import diopi_configs
-    diopi_case_item_path = os.path.join(cache_path, diopi_case_item_file)
-    device_case_item_path = os.path.join(cache_path, device_case_item_file)
+    diopi_case_item_path = os.path.join(cache_path, model_name, diopi_case_item_file)
+    case_output_dir = os.path.join(case_output_dir, model_name + '_case')
+    device_case_item_path = os.path.join(case_output_dir, device_case_item_file)
 
     cfg_parse = ConfigParser(diopi_case_item_path)
-    cfg_parse.parser(diopi_configs, fname)
+    cfg_parse.load(fname)
     cfg_path = diopi_case_item_path
 
     if impl_folder != "":
         cfg_path = device_case_item_path % os.path.basename(impl_folder)
-        device_config_path = os.path.join(impl_folder, "device_configs.py")
-        dst_path = os.path.join(cur_dir, "device_configs.py")
-
-        def unlink_device():
-            if os.path.islink(dst_path):
-                os.unlink(dst_path)
-
-        unlink_device()
-        os.symlink(device_config_path, dst_path)
-        import atexit
-
-        atexit.register(unlink_device)
+        sys.path.append(impl_folder)
 
         from device_configs import device_configs
 

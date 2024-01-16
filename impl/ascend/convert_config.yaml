@@ -212,15 +212,24 @@
 - diopiExp:
     dtype: (bool, uint8, int8, int16, int32, int64)->float32
 
+- diopiPow:
+    dtype: (bool, uint8, int8, int16, int32, int64)->float32
+
+- diopiPowInp:
+    dtype: (bool, uint8, int8, int16, int32, int64)->float32
+
+- diopiPowTensor:
+    dtype: (bool, uint8, int8, int16, int32, int64)->float32
+
+- diopiPowInpTensor:
+    dtype: (bool, uint8, int8, int16, int32, int64)->float32
+
 - diopiNorm:
     dtype: (bool, uint8, int8, int16, int32, int64, float16, float64)->float32
 
 - diopiRsqrt:
     dtype: (int8, uint8, int16, int32, int64, bool)->float32
 
-- diopiAddmm:
-    dtype: (float16, float32)->float64
-    
 - diopiEmbeddingBackward:
     dtype: (float64)->float32
 
@@ -229,6 +238,65 @@
 
 - diopiDropoutInp:
     dtype: (float64)->float32
-    
+
+- diopiExpand:
+    dtype: (uint8, int16)->int32, (float64)->float32
+
 - diopiSort:
+    dtype: (float64)->float32
+
+- diopiScatter:
+    dtype: (uint8,int8)->int32
+
+- diopiScatterInp:
+    dtype: (uint8,int8)->int32
+
+- diopiScatterScalar:
+    dtype: (uint8,int8)->int32
+
+- diopiScatterInpScalar:
+    dtype: (uint8,int8)->int32
+
+- diopiRotaryEmbedding:
+    dtype: (float64)->float32
+
+- diopiCol2Im:
+    # data type float64 of input [x] is not supported
+    dtype: (float64)->float32
+
+- diopiRemainderTensor:
+    dtype: (bool, uint8, int8, int16, uint16)->int32, (float64)->float32
+
+- diopiRemainderScalar:
+    dtype: (bool, uint8, int8, int16, uint16)->int32, (float64)->float32
+
+- diopiRemainder:
+    dtype: (bool, uint8, int8, int16, uint16)->int32, (float64)->float32
+
+- diopiHardswish:
+    # data type DT_DOUBLE of input [x] is not supported
+    dtype: (float64)->float32
+
+- diopiHardswishInp:
+    dtype: (float64)->float32
+
+- diopiHardswishBackward:
+    dtype: (float64)->float32
+
+- diopiAtan:
+    dtype: (uint8, int8, int32, int16, int64, bool)->float32
+
+- diopiAtanInp:
+    dtype: (uint8, int8, int32, int16, int64, bool)->float32
+
+- diopiNormalTensor:
+    dtype: (float64)->float32
+
+- diopiNormalScalarTensor:
+    dtype: (float64)->float32
+
+- diopiNormalTensorScalar:
+    dtype: (float64)->float32
+
+- diopiGatherBackward:
     dtype: (float64)->float32

@@ -70,6 +70,11 @@ case $1 in
     cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DIMPL_OPT=supa -DCMAKE_BUILD_TYPE=Release -DTEST=ON
     make -j8
     ;;
+  kunlunxin)
+    mkdir -p build && cd build
+    cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DIMPL_OPT=kunlunxin -DCMAKE_BUILD_TYPE=Release -DTEST=ON
+    make -j32
+    ;;
   *)
     echo -e "[ERROR] Incorrect compilation option:" $1 || exit 1
     ;;

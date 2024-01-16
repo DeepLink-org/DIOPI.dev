@@ -49,45 +49,16 @@
 
 using diopi_tensor_list = std::vector<diopiTensorHandle_t>;
 
-extern thread_local diopiContextHandle_t context;
-
-namespace c10 {
-
-namespace cuda {
-
-// Note: this is a overloaded aten function to get the stream from context.
-// For original functions, please refer to https://github.com/pytorch/pytorch/blob/v1.10.0/c10/cuda/CUDAStream.cpp.
-inline CUDAStream getCurrentCUDAStream(DeviceIndex device_index) {
-    if (device_index == -1) {
-        device_index = current_device();
-    }
-    if (context) {
-        diopiStreamHandle_t stream_handle;
-        diopiGetStream(context, &stream_handle);
-        return getStreamFromExternal(static_cast<cudaStream_t>(stream_handle), device_index);
-    } else {
-        return getDefaultCUDAStream(device_index);
-    }
-}
-
-}  // namespace cuda
-}  // namespace c10
-
 namespace impl {
 
 namespace aten {
 
-inline void setCurCtx(diopiContextHandle_t ctx) {
-    context = ctx;
+inline void setCurStream(diopiContextHandle_t ctx) {
     diopiStreamHandle_t stream_handle;
     diopiGetStream(ctx, &stream_handle);
     c10::cuda::CUDAStream cur_stream = c10::cuda::getStreamFromExternal(static_cast<cudaStream_t>(stream_handle), c10::cuda::current_device());
     c10::cuda::setCurrentCUDAStream(cur_stream);
-    // Here, we set the current stream of cuda to the stream of diopi, but when the context is unloaded, it is not restored.
-    // The main reason is that the current stream of cuda is not used. However, there may be hidden bugs, which will be optimized later.
 }
-
-inline void unsetCurCtx() { context = nullptr; }
 
 inline void sync(diopiContextHandle_t ctx) {
     diopiStreamHandle_t stream_handle;
@@ -97,7 +68,7 @@ inline void sync(diopiContextHandle_t ctx) {
 
 caffe2::TypeMeta getATenType(diopiDtype_t dt);
 
-diopiDtype_t getDIOPITensorType(at::Tensor& input);
+diopiDtype_t getDIOPITensorType(const at::Tensor& input);
 
 inline diopiDevice_t getDIOPIDevice(c10::DeviceType device) {
     if (device == c10::DeviceType::CPU) {
@@ -113,8 +84,7 @@ inline c10::DeviceType getATenDevice(diopiDevice_t device) {
     return c10::DeviceType::CUDA;
 }
 
-template <typename T>
-at::Tensor buildATen(T tensor);
+at::Tensor buildATen(diopiConstTensorHandle_t tensor);
 
 inline bool isInt(const diopiScalar_t* scalar) { return scalar->stype <= 7; }
 
@@ -136,10 +106,11 @@ inline decltype(auto) buildATenList(T* tensors, int64_t numTensors) {
 }
 
 inline void updateATen2Tensor(diopiContextHandle_t ctx, const at::Tensor& atOut, diopiTensorHandle_t out) {
-    // TODO(fengsibo): add device and nbytes check
     if (out != nullptr) {
-        at::Tensor atOutput = buildATen(out);
-        atOutput.reshape_as(atOut).copy_(atOut, true);
+        at::Tensor atOutput = buildATen(out).reshape_as(atOut);
+        // Set non_blocking=true to improve performance.
+        // The data is not ready when this function returns.
+        at::native::copy_(atOutput, atOut, true);
     }
 }
 
