@@ -289,6 +289,12 @@ class CustomizedTest(object):
             out[start:end, :] = _torch_context_attention(q[start:end], k[start:end], v[start:end], 1, int(b_seq_len[i]), head, dim)
         return out
 
+    def plus_scalar_inp(inoutput, val, size):
+        if size >= inoutput.shape[0]:
+            inoutput += val
+        else:
+            inoutput[:size] += val
+        return inoutput
 
 class GenOutputData(object):
     r'''
