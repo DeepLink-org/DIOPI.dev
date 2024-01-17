@@ -5313,3 +5313,20 @@ def update_padding_count(total_padding_count, input_lengths, max_input_length, b
     ret = func(total_padding_count.context(), total_padding_count, input_lengths, max_input_length, batch_size)
     check_returncode(ret)
     return total_padding_count
+
+def length_criterion(finished, should_stop, finished_sum, sequence_limit_length, batch_size, step):
+    call = "diopiLengthCriterion"
+    func = check_function(call)
+    
+    ret = func(finished.context(), finished, should_stop, finished_sum, sequence_limit_length, batch_size, step)
+    check_returncode(ret)
+    return finished, should_stop, finished_sum
+
+def gather_output(output_ids, ids, context_length, max_context_len, max_gen_step, max_output_len, batch_size):
+    call = "diopiGatherOutput"
+    func = check_function(call)
+    
+    ret = func(output_ids.context(), output_ids, ids, context_length, max_context_len, max_gen_step, max_output_len, batch_size)
+    check_returncode
+    return output_ids
+

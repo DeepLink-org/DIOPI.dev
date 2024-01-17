@@ -8495,5 +8495,75 @@ diopi_configs = {
                 }
             ]
         )
+    ),
+    
+    'length_criterion' : dict(
+        name=['length_criterion'],
+        interface=['CustomizedTest'],
+        para=dict(
+            batch_size = [1, 3],
+            step = [3, 5]  
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['finished'],
+                    "value": ([True], [False, False, False], ),
+                    "dtype": [np.bool_],
+                    "gen_policy": "gen_tensor_by_value"
+                },
+                {
+                    "ins": ['should_stop'],
+                    "value":([True], [False], ),
+                    "dtype": [np.bool_],
+                    "gen_policy": "gen_tensor_by_value"
+                },
+                {
+                    "ins": ['finished_sum'],
+                    "value":([1], [0], ),
+                    "dtype": [np.int32, np.int64],
+                    "gen_policy": "gen_tensor_by_value"
+                },
+                {
+                    "ins": ['sequence_limit_length'],
+                    "value":([2], [6, 5, 4], ),
+                    "dtype": [np.int32, np.int64],
+                    "gen_policy": "gen_tensor_by_value"
+                }
+            ]
+        )
+    ),
+    
+    'gather_output' : dict(
+        name=['gather_output'],
+        interface=['CustomizedTest'],
+        para=dict(
+            max_context_len = [3, 5, 5],
+            max_gen_step = [3, 4, 7],
+            max_output_len = [3, 5, 8],
+            batch_size = [3, 5, 5],
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['output_ids'],
+                    "shape": ((3, 3), (5, 5), (5, 8)),
+                    "dtype": [np.int32, np.int64],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['ids'],
+                    "shape": ((3, 3), (5, 5), (8, 5)),
+                    "dtype": [np.int32, np.int64],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['context_length'],
+                    "value":([3, 3, 3], [0, 1, 2, 4, 5], [0, 1, 2, 3, 4, 5, 3, 2], ),
+                    "dtype": [np.int32, np.int64],
+                    "gen_policy": "gen_tensor_by_value"
+                }
+            ]
+        )
     )
 }

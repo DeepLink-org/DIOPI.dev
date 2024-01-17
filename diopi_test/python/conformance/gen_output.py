@@ -302,6 +302,19 @@ class CustomizedTest(object):
             total_padding_count[i] = max_input_length - input_lengths[i]
         return total_padding_count
 
+    def length_criterion(finished, should_stop, finished_sum, sequence_limit_length, batch_size, step):
+        finished = sequence_limit_length <= step
+        finished_sum = finished.sum()
+        should_stop = finished_sum == batch_size
+        return finished, should_stop, finished_sum
+    
+    def gather_output(output_ids, ids, context_length, max_context_len, max_gen_step, max_output_len, batch_size):
+        for i in range(batch_size):
+            output_ids[i, 0: context_length[i].item()] = ids[0:context_length[i].item(), i]
+            if max_gen_step > max_context_len:
+                output_ids[i, context_length[i].item():context_length[i].item() + max_gen_step - max_context_len] = ids[max_context_len: max_gen_step, i]
+        return output_ids
+    
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data
