@@ -5345,3 +5345,11 @@ def stopwords_criterion(output_ids, stop_words, finished, id_offset, stop_words_
     ret = func(output_ids.context(), output_ids, stop_words, finished, id_offset, stop_words_len, batch_size, step)
     check_returncode(ret)
     return finished
+
+def embedding_lookup_pos_encoding(from_tensor, embedding_table, all_ids, batch_size, hidden_units, step):
+    call = "diopiEmbeddingLookupPosEncoding"
+    func = check_function(call)
+    
+    ret = func(from_tensor.context(), from_tensor, embedding_table, all_ids, batch_size, hidden_units, step)
+    check_returncode(ret)
+    return from_tensor

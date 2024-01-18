@@ -368,6 +368,10 @@ class CustomizedTest(object):
                     break
         return finished
 
+    def embedding_lookup_pos_encoding(from_tensor, embedding_table, all_ids, batch_size, hidden_units, step):
+        this_step_ids = all_ids[step]
+        from_tensor = torch.index_select(embedding_table, 0, this_step_ids)
+        return from_tensor
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data
