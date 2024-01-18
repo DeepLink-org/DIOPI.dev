@@ -372,6 +372,10 @@ class CustomizedTest(object):
         this_step_ids = all_ids[step]
         from_tensor = torch.index_select(embedding_table, 0, this_step_ids)
         return from_tensor
+    
+    def inputids_embedding_lookup_pos_encoding(from_tensor, input_ids, embedding_table, input_lengths, hidden_units):
+        from_tensor = torch.index_select(embedding_table, 0, input_ids)
+        return from_tensor
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data

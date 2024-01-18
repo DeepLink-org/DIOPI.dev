@@ -5353,3 +5353,11 @@ def embedding_lookup_pos_encoding(from_tensor, embedding_table, all_ids, batch_s
     ret = func(from_tensor.context(), from_tensor, embedding_table, all_ids, batch_size, hidden_units, step)
     check_returncode(ret)
     return from_tensor
+
+def inputids_embedding_lookup_pos_encoding(from_tensor, input_ids, embedding_table, input_lengths, hidden_units):
+    call = "diopiInputIdsEmbeddingLookupPosEncoding"
+    func = check_function(call)
+    
+    ret = func(from_tensor.context(), from_tensor, input_ids, embedding_table, input_lengths, hidden_units)
+    check_returncode(ret)
+    return from_tensor

@@ -82,5 +82,6 @@ ops_with_states = {"batch_norm": {"running_mean", "running_var"},
                    "gather_output": {"output_ids"},
                    "banbadwords_inp": {'logits'},
                    "stopwords_criterion": {'finished'},
-                   "embedding_lookup_pos_encoding": {'from_tensor'}
+                   "embedding_lookup_pos_encoding": {'from_tensor'},
+                   "inputids_embedding_lookup_pos_encoding": {'from_tensor'}
                    }

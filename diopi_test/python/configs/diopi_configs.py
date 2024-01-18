@@ -8699,4 +8699,34 @@ diopi_configs = {
         )
     ),
     
+    'inputids_embedding_lookup_pos_encoding' : dict(
+        name=['inputids_embedding_lookup_pos_encoding'],
+        interface=['CustomizedTest'],
+        para=dict(
+            input_lengths = [3],
+            hidden_units = [10],
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['from_tensor'],                 # [input_lengths, hidden]
+                    "shape": ((3, 10), ),      
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['embedding_table'],              # [vocab, hidden]
+                    "shape": ((5, 10), ),
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['input_ids'],                      # [input_lengths]
+                    "shape": ((3, ), ),
+                    "dtype": [np.int32],
+                    "gen_fn": dict(fn='Genfunc.randint', low=0, high=4),
+                }
+            ]
+        )
+    ),
 }
