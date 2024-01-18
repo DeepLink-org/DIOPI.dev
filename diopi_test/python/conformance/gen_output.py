@@ -315,6 +315,33 @@ class CustomizedTest(object):
                 output_ids[i, context_length[i].item():context_length[i].item() + max_gen_step - max_context_len] = ids[max_context_len: max_gen_step, i]
         return output_ids
     
+    def banbadwords_inp(logits, output_ids, bad_words, id_offset, bad_words_len, share_words, batch_size, vocab_size, step):
+        for i in range(batch_size):
+            bad_words_array = bad_words[0] if share_words else bad_words[i][0]
+            bad_words_offsets = bad_words[1] if share_words else bad_words[i][1]
+            for bad_word_idx in range(bad_words_len):
+                if bad_words_offsets[bad_word_idx] < 0:
+                    continue
+                
+                bad_word_start_ids = bad_words_offsets[bad_word_idx - 1].item() if bad_word_idx > 0 else 0
+                bad_word_end_idx = bad_words_offsets[bad_word_idx].item()
+                bad_word_len = bad_word_end_idx - bad_word_start_ids
+                bad_word = bad_words_array[bad_word_start_ids: bad_word_end_idx]
+                
+                if step + 1 < bad_words_len or bad_word_len < 1:
+                    continue
+                
+                should_ban = bad_word_len == 1
+                if bad_word_len != 1:
+                    output_ids_to_compare = output_ids[step - bad_word_len + 1: step + 1:, i]
+                    bad_word_to_compare = bad_word[:-1]
+                    should_ban = (bad_word_to_compare == output_ids_to_compare).all()
+                
+                if should_ban:
+                    banned_token = bad_word[-1].item()
+                    if 0 < banned_token and banned_token < vocab_size:
+                        logits[i, banned_token] = -float('inf')
+        return logits
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data

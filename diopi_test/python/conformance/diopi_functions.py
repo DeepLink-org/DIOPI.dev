@@ -5327,6 +5327,13 @@ def gather_output(output_ids, ids, context_length, max_context_len, max_gen_step
     func = check_function(call)
     
     ret = func(output_ids.context(), output_ids, ids, context_length, max_context_len, max_gen_step, max_output_len, batch_size)
-    check_returncode
+    check_returncode(ret)
     return output_ids
 
+def banbadwords_inp(logits, output_ids, bad_words, id_offset, bad_words_len, share_words, batch_size, vocab_size, step):
+    call = "diopiBanBadWordsInp"
+    func =  check_function(call)
+    
+    ret = func(logits.context(), logits, output_ids, bad_words, id_offset, bad_words_len, share_words, batch_size, vocab_size, step)
+    check_returncode(ret)
+    return logits
