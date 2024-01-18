@@ -323,17 +323,17 @@ class CustomizedTest(object):
                 if bad_words_offsets[bad_word_idx] < 0:
                     continue
                 
-                bad_word_start_ids = bad_words_offsets[bad_word_idx - 1].item() if bad_word_idx > 0 else 0
+                bad_word_start_idx = bad_words_offsets[bad_word_idx - 1].item() if bad_word_idx > 0 else 0
                 bad_word_end_idx = bad_words_offsets[bad_word_idx].item()
-                bad_word_len = bad_word_end_idx - bad_word_start_ids
-                bad_word = bad_words_array[bad_word_start_ids: bad_word_end_idx]
+                bad_word_len = bad_word_end_idx - bad_word_start_idx
+                bad_word = bad_words_array[bad_word_start_idx: bad_word_end_idx]
                 
-                if step + 1 < bad_words_len or bad_word_len < 1:
+                if step + 1 < bad_word_len or bad_word_len < 1:
                     continue
                 
                 should_ban = bad_word_len == 1
                 if bad_word_len != 1:
-                    output_ids_to_compare = output_ids[step - bad_word_len + 1: step + 1:, i]
+                    output_ids_to_compare = output_ids[step - (bad_word_len - 1): step, i]
                     bad_word_to_compare = bad_word[:-1]
                     should_ban = (bad_word_to_compare == output_ids_to_compare).all()
                 
@@ -342,6 +342,32 @@ class CustomizedTest(object):
                     if 0 < banned_token and banned_token < vocab_size:
                         logits[i, banned_token] = -float('inf')
         return logits
+    
+    def stopwords_criterion(output_ids, stop_words, finished, id_offset, stop_words_len, batch_size, step):
+        for i in range(batch_size):
+            stop_words_array = stop_words[i][0]
+            stop_words_offsets = stop_words[i][1]
+            for stop_word_idx in range(stop_words_len):
+                if stop_words_offsets[stop_word_idx] < 0:
+                    continue
+                
+                stop_word_start_idx = stop_words_offsets[stop_word_idx - 1].item() if stop_word_idx > 0 else 0
+                stop_word_end_idx = stop_words_offsets[stop_word_idx].item()
+                stop_word_len = stop_word_end_idx - stop_word_start_idx
+                stop_word = stop_words_array[stop_word_start_idx: stop_word_end_idx]
+                
+                if step + 1 < stop_word_len:
+                    continue
+                
+    
+                output_ids_to_compare = output_ids[step + 1 - stop_word_len: step + 1, i]
+                should_stop = (stop_word == output_ids_to_compare).all()
+                
+                if should_stop:
+                    finished[i] = True
+                    break
+        return finished
+
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data

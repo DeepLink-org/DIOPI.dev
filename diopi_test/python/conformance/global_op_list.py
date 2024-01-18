@@ -80,5 +80,6 @@ ops_with_states = {"batch_norm": {"running_mean", "running_var"},
                    "plus_scalar_inp": {"inoutput"},
                    "length_criterion": {"finished", "should_stop", "finished_sum"},
                    "gather_output": {"output_ids"},
-                   "banbadwords_inp": {'logits'}
+                   "banbadwords_inp": {'logits'},
+                   "stopwords_criterion": {'finished'}
                    }

@@ -8592,6 +8592,7 @@ diopi_configs = {
                                [1, 5, 9],
                                [2, 6, 10],
                                [3, 7, 11]],
+                              
                               [[1, 4],
                                [2, 5],
                                [3, 6]], ),
@@ -8599,13 +8600,14 @@ diopi_configs = {
                     "gen_policy": "gen_tensor_by_value"
                 },
                 {
-                    "ins": ['bad_words'],                    # [batch_size, 2, stop_words_len] or [2, stop_words_len] for share
+                    "ins": ['bad_words'],                    # [batch_size, 2, bad_words_len] or [2, bad_words_len] for share
                     "value":([[[4, 2, 3],
                                [1, 3, -1]],
                               [[6, 7, 8],
                                [3, -1, -1]],
                               [[8, 0, 0],
                                [1, -1, -1]]], 
+                             
                              [[1, 2, 3, 5],
                               [4, -1, -1, -1]], ),
                     "dtype": [np.int32],
@@ -8613,5 +8615,56 @@ diopi_configs = {
                 }
             ]
         )
+    ),
+    
+    'stopwords_criterion' : dict(
+        name=['stopwords_criterion'],
+        interface=['CustomizedTest'],
+        para=dict(
+            id_offset = [0, 0],
+            stop_words_len = [4, 4],
+            batch_size = [3, 2],
+            step = [3, 2]
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['finished'],                      # [batch_size]
+                    "value": ([False, False, False], [False, False]),
+                    "dtype": [np.bool_],
+                    "gen_policy": 'gen_tensor_by_value',
+                },
+                {
+                    "ins": ['output_ids'],                  # [step + 1, batch_size]
+                    "value": ([[0, 4, 8],
+                               [1, 5, 9],
+                               [2, 6, 10],
+                               [3, 7, 11]],
+                              
+                              [[-1, -4],
+                               [-2, -5],
+                               [-3, -6]], ),
+                    "dtype": [np.int32],
+                    "gen_policy": "gen_tensor_by_value"
+                },
+                {
+                    "ins": ['stop_words'],                    # [batch_size, 2, stop_words_len]
+                    "value":([[[4, 1, 2, 3],
+                               [1, 4, -1, -1]],
+                              [[6, 7, 8, 9],
+                               [3, 4, -1, -1]],
+                              [[11, 12, 13, 0],
+                               [1, 3, -1, -1]]],
+                             
+                             [[[0, -1, -2, -3],
+                               [4, -1, -1, -1]],
+                              [[-4, -5, -6, -7],
+                               [3, -1, -1, -1]]]),
+                    "dtype": [np.int32],
+                    "gen_policy": "gen_tensor_by_value"
+                }
+            ]
+        )
     )
+    
 }

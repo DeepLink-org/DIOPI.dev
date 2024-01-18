@@ -5332,8 +5332,16 @@ def gather_output(output_ids, ids, context_length, max_context_len, max_gen_step
 
 def banbadwords_inp(logits, output_ids, bad_words, id_offset, bad_words_len, share_words, batch_size, vocab_size, step):
     call = "diopiBanBadWordsInp"
-    func =  check_function(call)
+    func = check_function(call)
     
     ret = func(logits.context(), logits, output_ids, bad_words, id_offset, bad_words_len, share_words, batch_size, vocab_size, step)
     check_returncode(ret)
     return logits
+
+def stopwords_criterion(output_ids, stop_words, finished, id_offset, stop_words_len, batch_size, step):
+    call = "diopiStopWordsCriterion"
+    func = check_function(call)
+    
+    ret = func(output_ids.context(), output_ids, stop_words, finished, id_offset, stop_words_len, batch_size, step)
+    check_returncode(ret)
+    return finished
