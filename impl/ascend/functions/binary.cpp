@@ -7,6 +7,9 @@
 #include <cmath>
 
 #include "../common/acloprunner.hpp"
+#include "../common/debug.hpp"
+#include "../../aclnn_demo/test_add.hpp"
+#include "aclnn/acl_meta.h"
 
 namespace impl {
 namespace ascend {
@@ -30,8 +33,23 @@ bool isScalarOne(const diopiScalar_t* alpha) {
     }
 }
 
+inline aclScalar buildATen(const diopiScalar_t* scalar) {
+    if (scalar == nullptr) {
+        NOT_SUPPORTED("scalar is null ptr, we use temporarily zero");
+        return at::Scalar();
+    }
+    if (isInt(scalar)) {
+        int64_t ival = scalar->ival;
+        return ival;
+    } else {
+        double fval = scalar->fval;
+        return fval;
+    }
+}
+
 diopiError_t diopiAdd(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, diopiConstTensorHandle_t other,
                       const diopiScalar_t* alpha) {
+# if 0
     diopiDtype_t outDtype, inputDtype, otherDtype;
     diopiGetTensorDtype(out, &outDtype);
     diopiGetTensorDtype(input, &inputDtype);
@@ -58,6 +76,21 @@ diopiError_t diopiAdd(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiCo
     }
 
     if (outDtype != highType) diopiCastDtype(ctx, out, outTemp);
+# else
+    int32_t deviceId = 0;
+    aclrtContext context;
+    aclrtStream stream;
+    auto ret = aclnnAddTest(deviceId, context, stream, input, other, alpha, out);
+
+    if (ret != 0) {
+        std::cerr << "ret = " << ret << std::endl;
+    }
+
+    // AscendTensor outAt(out);
+    // printContiguousTensor(ctx, outAt, "outAt");
+
+    std::cerr << "RUN SUCCESS!!!" << std::endl
+# endif
     return diopiSuccess;
 }
 
