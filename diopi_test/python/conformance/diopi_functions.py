@@ -5361,3 +5361,20 @@ def inputids_embedding_lookup_pos_encoding(from_tensor, input_ids, embedding_tab
     ret = func(from_tensor.context(), from_tensor, input_ids, embedding_table, input_lengths, hidden_units)
     check_returncode(ret)
     return from_tensor
+
+def batch_apply_temperature_penalty(logits, bias, temperatures, batch_size, vocab_size, vocab_size_padd):
+    call = "diopiBatchApplyTemperaturePenaltyInp"
+    func = check_function(call)
+    
+    ret = func(logits.context(), logits, bias, temperatures, batch_size, vocab_size, vocab_size_padd)
+    check_returncode(ret)
+    return logits
+
+def batch_apply_repetition_penalty(logits, penalties, output_ids, batch_size, vocab_size, input_lengths, max_input_length, step, penalty_type):
+    call = "diopiBatchApplyRepetitionPenaltyInp"
+    func = check_function(call)
+    
+    ret = func(logits.context(), logits, penalties, output_ids, batch_size, vocab_size, input_lengths, max_input_length, step, penalty_type)
+    check_returncode(ret)
+    return logits
+

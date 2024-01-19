@@ -359,7 +359,6 @@ class CustomizedTest(object):
                 if step + 1 < stop_word_len:
                     continue
                 
-    
                 output_ids_to_compare = output_ids[step + 1 - stop_word_len: step + 1, i]
                 should_stop = (stop_word == output_ids_to_compare).all()
                 
@@ -376,6 +375,38 @@ class CustomizedTest(object):
     def inputids_embedding_lookup_pos_encoding(from_tensor, input_ids, embedding_table, input_lengths, hidden_units):
         from_tensor = torch.index_select(embedding_table, 0, input_ids)
         return from_tensor
+    
+    def batch_apply_temperature_penalty(logits, bias, temperatures, batch_size, vocab_size, vocab_size_padd):
+        inv_temperatures = 1.0 / (temperatures + 1e-6)
+        max_t_val = np.finfo(np.float32).max if logits.dtype == torch.float32 else 65504.0
+        max_t_val = torch.tensor(max_t_val, dtype=logits.dtype, device=logits.device)
+        logits[:, vocab_size: vocab_size_padd] = -max_t_val
+        if bias is not None:
+            logits[:, :vocab_size] += bias
+        logits[:, :vocab_size] *= inv_temperatures.view(-1, 1)
+        return logits
+
+    def batch_apply_repetition_penalty(logits, penalties, output_ids, batch_size, vocab_size, input_lengths, max_input_length, step, penalty_type):
+        if penalty_type == 0:
+            return logits
+        
+        for i in range(batch_size):
+            input_length = input_lengths[i].item() if input_lengths is not None else max_input_length
+            index = output_ids[0:input_length, i].view(-1)
+            if step >= max_input_length:
+                index = torch.cat((index, output_ids[max_input_length:, i].view(-1)))
+            logits_this_batch = torch.index_select(logits[i], 0, index)
+            # Penalty type.0 == None;1 == Additive means logit - penalty;2 == Multiplicative
+            if penalty_type == 1:
+                penalty_logits = logits_this_batch - penalties[i]
+            else:
+                #  penalty_logits = penalty_logits < 0.0f ? logit * penalty[i] : penalty_logits / penalty[i];
+                penalty_logits = torch.where(logits_this_batch < 0.0, logits_this_batch * penalties[i], logits_this_batch / penalties[i])
+            
+            index_int64 = index.to(torch.int64)
+            logits[i].scatter_(0, index_int64, penalty_logits)
+        
+        return logits
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data

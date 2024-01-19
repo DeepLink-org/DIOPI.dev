@@ -8566,7 +8566,7 @@ diopi_configs = {
             ]
         )
     ),
-    # banbadwords_inp(logits, output_ids, bad_words, id_offset, bad_words_len, share_words, batch_size, vocab_size, step)
+    
     'banbadwords_inp' : dict(
         name=['banbadwords_inp'],
         interface=['CustomizedTest'],
@@ -8725,6 +8725,79 @@ diopi_configs = {
                     "shape": ((3, ), ),
                     "dtype": [np.int32],
                     "gen_fn": dict(fn='Genfunc.randint', low=0, high=4),
+                }
+            ]
+        )
+    ),
+    
+    # batch_apply_temperature_penalty
+    'batch_apply_temperature_penalty' : dict(
+        name=['batch_apply_temperature_penalty'],
+        interface=['CustomizedTest'],
+        para=dict(
+            batch_size = [3, 5],
+            vocab_size = [6, 8],
+            vocab_size_padd = [10, 12],
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['logits'],                 # [batch_size, vocab_size_padded]
+                    "shape": ((3, 10), (5, 12)),      
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['bias'],              # [vocab_size]
+                    "shape": ((6,), None, ),
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['temperatures'],                      # [batch_size]
+                    "shape": ((3, ), (5, ), ),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                }
+            ]
+        )
+    ),
+    
+    'batch_apply_repetition_penalty' : dict(
+        name=['batch_apply_repetition_penalty'],
+        interface=['CustomizedTest'],
+        para=dict(
+            batch_size = [3, 5],
+            vocab_size = [6, 10],
+            max_input_length = [10, 8],
+            step = [5, 10],
+            penalty_type = [1, 2]
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['logits'],                 # [batch_size, vocab_size]
+                    "shape": ((3, 6), (5, 10)),      
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['penalties'],              # [batch_size]
+                    "shape": ((3,), (5, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['output_ids'],                      # [step, batch_size]
+                    "shape": ((5, 3), (10, 5)),
+                    "dtype": [np.int32],
+                    "gen_fn": dict(fn='Genfunc.randint', low=0, high=4),
+                },
+                {
+                    "ins": ['input_lengths'],    # [batch_size]
+                    "value": ([3, 4, 2], None),
+                    "dtype": [np.int32],
+                    "gen_policy": "gen_tensor_by_value",
                 }
             ]
         )
