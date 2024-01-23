@@ -407,6 +407,109 @@ class CustomizedTest(object):
             logits[i].scatter_(0, index_int64, penalty_logits)
         
         return logits
+    
+    def fused_context_attention_inp(inoutput, qkv_weight, qkv_bias, key_cache, value_cache, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta):
+        token_num = inoutput.shape[0]
+        qkv = torch.matmul(inoutput, qkv_weight) # [token_num, hidden_units] * [hidden_units, (local_head_num+local_kv_head_num*2)*size_per_head]
+        if qkv_bias is not None:
+            qkv += qkv_bias # [token_num, (local_head_num+local_kv_head_num*2)*size_per_head] + [1, local_head_num+local_kv_head_num*2)*size_per_head]
+        q = qkv[:, :local_head_num*size_per_head].reshape(token_num, local_head_num, size_per_head)
+        k = qkv[:, local_head_num*size_per_head: (local_head_num+local_kv_head_num)*size_per_head].reshape(token_num, local_kv_head_num, size_per_head)
+        v = qkv[:, (local_head_num+local_kv_head_num)*size_per_head:].reshape(token_num, local_kv_head_num, size_per_head)
+        
+        def rope(x: torch.Tensor, rotary_embedding: float, rope_theta: float, t_start: float) -> torch.Tensor:
+            # x (torch.Tensor): [input_len, head_num, size_per_head]
+            x = x.reshape(x.shape[0], x.shape[1], size_per_head // 2, 2)
+            # x_odd, x_even: [input_len, head_num, size_per_head // 2, 1]
+            x_even = x[:, :, :, 0]
+            x_odd = x[:, :, : ,1]
+            # theta: [size_per_head // 2], theta[i] = pow(rope_theta, -2 * i / rotary_embedding)
+            theta = torch.pow(rope_theta, -2 * torch.arange(x_even.shape[-1], dtype=torch.float32, device=x.device) / rotary_embedding)
+            # timestamp: [input_len], timestamp[i] = t_start + i
+            # sin, cos: [input_len, 1, size_per_head // 2]
+            timestamp = torch.arange(x_even.shape[0], dtype=torch.float32, device=x.device) + t_start
+            cos = torch.cos(timestamp.view(-1, 1) * theta.view(1, -1)).reshape(-1, 1, x_even.shape[-1])
+            sin = torch.sin(timestamp.view(-1, 1) * theta.view(1, -1)).reshape(-1, 1, x_even.shape[-1])
+            x_even_new = x_even * cos - x_odd * sin
+            x_odd_new = x_odd * cos + x_even * sin
+            x_new = torch.cat([x_even_new, x_odd_new], dim=-1).reshape(x.shape[0], x.shape[1], size_per_head)
+            return x_new
+        
+        def get_mask(input_lengths: torch.Tensor, context_lengths: torch.Tensor, max_q_len: int, max_kv_len: int, mask_dtype):
+            batch_size = input_lengths.shape[0]
+            mask = torch.ones((batch_size, 1, max_q_len, max_kv_len), dtype=mask_dtype, device=input_lengths.device)
+            for batch_idx in range(batch_size):
+                input_length = input_lengths[batch_idx].item()
+                context_length = context_lengths[batch_idx].item()
+                mask_this_batch = mask[batch_idx][0] # [max_q_len, max_kv_len] 
+                bool_mask = torch.ones((max_q_len, max_kv_len), dtype=torch.bool, device=input_lengths.device)
+                bool_mask[:input_length, :context_length - input_length] = False 
+                bool_mask[:input_length, context_length - input_length:context_length] = torch.tril(torch.ones(input_length, input_length, dtype=torch.bool), diagonal=0)
+                mask_this_batch += -10000 * bool_mask
+                
+            return mask
+        
+        pre_batches_len = 0
+        # prepare for calculating attention:
+        # 1. do rope for q, k
+        # 2. store k, v to key_cache, value_cache
+        # 3. padding q, k, v for calculating attention
+        q_cal = torch.zeros((batch_size, local_head_num, max_q_len, size_per_head), dtype=q.dtype, device=q.device)
+        k_cal = torch.zeros((batch_size, local_kv_head_num, size_per_head, max_kv_len), dtype=k.dtype, device=k.device)
+        v_cal = torch.zeros((batch_size, local_kv_head_num, max_kv_len, size_per_head), dtype=v.dtype, device=v.device)
+        # key_cache & value_cache: [batch_size] of [num_layer, local_kv_head_num, max_seq_len, size_per_head]
+        for batch_idx in range(batch_size):
+            input_length = input_lengths[batch_idx].item()
+            history_length = history_lengths[batch_idx].item()
+            # q_this_batch: [input_length, head_num, size_per_head]
+            q_this_batch = q[pre_batches_len: pre_batches_len + input_length, :, :]
+            k_this_batch = k[pre_batches_len: pre_batches_len + input_length, :, :]
+            v_this_batch = v[pre_batches_len: pre_batches_len + input_length, :, :]
+            pre_batches_len += input_length
+            # RoPE
+            q_rope = rope(q_this_batch, rotary_embedding, rope_theta, history_length)
+            k_rope = rope(k_this_batch, rotary_embedding, rope_theta, history_length)
+            
+            # q
+            q_cal[batch_idx, :, :input_length, :] = q_rope.permute(1, 0, 2) # [input_length, head_num, size_per_head] -> [head_num, input_length, size_per_head]
+            
+            # store new k to key_cache
+            padd_kv = torch.zeros((max_seq_len - input_length - history_length, local_kv_head_num, size_per_head), dtype=k.dtype, device=k.device)
+            k_rope_padd = torch.cat((k_rope, padd_kv), dim=0)
+            key_cache[batch_idx][layer_id, :, history_length:, :] = k_rope_padd.permute(1, 0, 2) # [len, head, dim] -> [head, len, dim]
+            # load his_k
+            his_k = key_cache[batch_idx][layer_id, :, :history_length, :] # [head_num, history_length, size_per_head]
+            # k for cal
+            k_cal[batch_idx, :, :, :history_length] = his_k.permute(0, 2, 1) # [head, len, dim] -> [head, dim, len]
+            k_cal[batch_idx, :, :, history_length:history_length + input_length] = k_rope.permute(1, 2, 0) # [len, head, dim] -> [head, dim, len]
+            
+                
+            # store new v to value_cache
+            v_padd = torch.cat((v_this_batch, padd_kv), dim=0)
+            value_cache[batch_idx][layer_id, :, history_length:, :] = v_padd.permute(1, 0, 2) # [len, head, dim] -> [head, len, dim]
+            # load his_v
+            his_v = value_cache[batch_idx][layer_id, :, :history_length, :] # [head_num, history_length, size_per_head]
+            # v for cal
+            v_cal[batch_idx, :, :history_length, :] = his_v
+            v_cal[batch_idx, :, history_length:history_length + input_length, :] = v_this_batch.permute(1, 0, 2) # [len, head, dim] -> [head, len, dim]
+        
+        # calculate attention
+        score = torch.matmul(q_cal, k_cal) # [batch_size, head_num, max_q_len, max_kv_len]
+        score = score / math.sqrt(size_per_head)
+        mask = get_mask(input_lengths, context_lengths, max_q_len, max_kv_len, inoutput.dtype)
+        score += mask
+        score = torch.softmax(score, dim=-1)
+        atten_out = torch.matmul(score, v_cal) # [batch_size, head_num, max_q_len, size_per_head]
+        
+        # update inoutput
+        pre_batches_len = 0
+        # inoutput: [token_num, hidden_units]
+        atten_out = atten_out.permute(0, 2, 1, 3) # [batch_size, head_num, max_q_len, size_per_head] -> [batch_size, max_q_len, head_num, size_per_head]
+        for batch_idx in range(batch_size):
+            input_length = input_lengths[batch_idx].item()
+            inoutput[pre_batches_len: pre_batches_len + input_length, :] = atten_out[batch_idx, :input_length, :, :].reshape(input_length, -1) # [head, len, dim] -> [len, head, dim] -> [len, head*dim]
+        
+        return inoutput, key_cache, value_cache
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data

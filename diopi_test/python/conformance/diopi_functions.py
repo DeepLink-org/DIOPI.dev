@@ -5378,3 +5378,32 @@ def batch_apply_repetition_penalty(logits, penalties, output_ids, batch_size, vo
     check_returncode(ret)
     return logits
 
+def fused_context_attention_inp(inoutput, qkv_weight, qkv_bias, key_cache, value_cache, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta):
+    call = "diopiFusedContextAttentionInp"
+    func = check_function(call)
+    
+    fusion_level = 0
+    
+    pre_work_size = -1
+    pre_work = None
+    workspace_size = -1
+    workspace = None
+    # get workspace_size and pre_work_size
+    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, True, workspace, workspace_size, fusion_level, key_cache, value_cache, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
+    check_returncode(ret)
+    
+    # create workspace
+    tmp_size = [workspace_size]
+    workspace = Tensor(tmp_size, Dtype.int8)
+    # create pre_work for attention_mask
+    inoutput_type_size = 4 if inoutput.get_dtype() == Dtype.float32 else 2 
+    tmp_size = [max(pre_work_size, inoutput_type_size * batch_size, max_q_len * max_kv_len)]
+    pre_work = Tensor(tmp_size, Dtype.int8)
+    
+    # prepare mask
+    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, False, workspace, workspace_size, fusion_level, key_cache, value_cache, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
+    check_returncode(ret)
+    
+    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, True, workspace, workspace_size, fusion_level, key_cache, value_cache, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
+    check_returncode(ret)
+    return inoutput, key_cache, value_cache

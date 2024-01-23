@@ -8802,4 +8802,75 @@ diopi_configs = {
             ]
         )
     ),
+    
+    'fused_context_attention_inp' : dict(
+        name=['fused_context_attention_inp'],
+        interface=['CustomizedTest'],
+        para=dict(
+            layer_id=[0],
+            local_head_num=[3],
+            local_kv_head_num=[3],
+            size_per_head=[10],
+            max_seq_len=[10],
+            max_q_len=[10],
+            max_kv_len=[10],
+            rotary_embedding=[20],
+            rope_theta=[10000.0],
+            batch_size=[3],
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['inoutput'],
+                    "shape": ((15, 30), ),               # [token_num, hidden(size_per_head * head_num)]
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['qkv_weight'],
+                    "shape": ((30, 90), ),            # [hidden, head_num * 3 * size_per_head, hidden]
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['qkv_bias'],
+                    "shape": ((1, 90), ),               # [1, (local_head_num+local_kv_head_num*2)*size_per_head]
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['key_cache'],
+                    "dtype": [np.float32, np.float16],
+                    "shape": ((3, 3, 10, 10), ),                     # [num_layer, local_kv_head_num, max_seq_len, size_per_head]
+                    "gen_policy": 'gen_tensor_list',
+                    "gen_num_range": [3, 4]                          # num = batch_size
+                },
+                {
+                    "ins": ['value_cache'],
+                    "dtype": [np.float32, np.float16],
+                    "shape": ((3, 3, 10, 10), ),                     # [num_layer, local_kv_head_num, max_seq_len, size_per_head]
+                    "gen_policy": 'gen_tensor_list',
+                    "gen_num_range": [3, 4]                          # num = batch_size
+                },
+                {
+                    "ins": ['input_lengths'],
+                    "value": ([4, 5, 6], ),
+                    "dtype": [np.int32],
+                    "gen_policy": "gen_tensor_by_value",
+                },
+                {
+                    "ins": ['history_lengths'],
+                    "value": ([0, 0, 0], ),
+                    "dtype": [np.int32],
+                    "gen_policy": "gen_tensor_by_value",
+                },
+                {
+                    "ins": ['context_lengths'],
+                    "value": ([4, 5, 6], ),
+                    "dtype": [np.int32],
+                    "gen_policy": "gen_tensor_by_value",
+                }
+            ]
+        )
+    )
 }
