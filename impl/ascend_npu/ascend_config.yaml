@@ -199,9 +199,8 @@ ascend:
 - diopiScatterInp
 - diopiScatterScalar
 - diopiScatterInpScalar
-- diopiApplyPenalty
-- diopiFormatCast
 ascend_npu:
+- diopiMatmul
 - diopiCastDtype
 - diopiCopyInp
 - diopiCat
@@ -216,3 +215,20 @@ ascend_npu:
 - diopiMaxPool2dWithIndices
 - diopiRotaryEmbedding
 - diopiCol2Im
+- diopiIndexPut
+- diopiIndexPutInp
+- diopiIndex
+- diopiIndexBackward
+- diopiDestIndexCopyKV
+- diopiTokenAttentionInference
+- diopiTokenSoftmaxReduceVInference
+- diopiApplyPenalty
+- diopiContextAttentionInference
+- diopiNativeMemoryFormatCast
+- diopiGetNativeMemoryFormat
+- diopiTensorDestructionHook
+- diopiHardswish
+- diopiHardswishInp
+- diopiHardswishBackward
+- diopiAtan
+- diopiAtanInp
