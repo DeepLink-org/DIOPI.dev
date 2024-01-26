@@ -87,4 +87,5 @@ ops_with_states = {"batch_norm": {"running_mean", "running_var"},
                    "batch_apply_temperature_penalty": {"logits"},
                    "batch_apply_repetition_penalty": {"logits"},
                    "fused_context_attention_inp": {"inoutput", "key_cache", "value_cache"},
+                   "fused_silu_ffn_inp": {"inoutput"}
                    }

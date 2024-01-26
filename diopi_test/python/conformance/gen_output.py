@@ -419,17 +419,19 @@ class CustomizedTest(object):
         
         def rope(x: torch.Tensor, rotary_embedding: float, rope_theta: float, t_start: float) -> torch.Tensor:
             # x (torch.Tensor): [input_len, head_num, size_per_head]
-            x = x.reshape(x.shape[0], x.shape[1], size_per_head // 2, 2)
+            input_len = x.shape[0]
+            head_num = x.shape[1]
+            x = x.reshape(input_len, head_num, size_per_head // 2, 2)
             # x_odd, x_even: [input_len, head_num, size_per_head // 2, 1]
-            x_even = x[:, :, :, 0]
-            x_odd = x[:, :, : ,1]
+            x_even = x[:, :, :, 0].reshape(input_len, head_num, size_per_head // 2, 1)
+            x_odd = x[:, :, : ,1].reshape(input_len, head_num, size_per_head // 2, 1)
             # theta: [size_per_head // 2], theta[i] = pow(rope_theta, -2 * i / rotary_embedding)
-            theta = torch.pow(rope_theta, -2 * torch.arange(x_even.shape[-1], dtype=torch.float32, device=x.device) / rotary_embedding)
+            theta = torch.pow(rope_theta, -2 * torch.arange(size_per_head // 2, dtype=torch.float32, device=x.device) / rotary_embedding)
             # timestamp: [input_len], timestamp[i] = t_start + i
-            # sin, cos: [input_len, 1, size_per_head // 2]
+            # sin, cos: [input_len, 1, size_per_head // 2, 1]
             timestamp = torch.arange(x_even.shape[0], dtype=torch.float32, device=x.device) + t_start
-            cos = torch.cos(timestamp.view(-1, 1) * theta.view(1, -1)).reshape(-1, 1, x_even.shape[-1])
-            sin = torch.sin(timestamp.view(-1, 1) * theta.view(1, -1)).reshape(-1, 1, x_even.shape[-1])
+            cos = torch.cos(timestamp.view(-1, 1) * theta.view(1, -1)).reshape(input_len, 1, size_per_head // 2, 1)
+            sin = torch.sin(timestamp.view(-1, 1) * theta.view(1, -1)).reshape(input_len, 1, size_per_head // 2, 1)
             x_even_new = x_even * cos - x_odd * sin
             x_odd_new = x_odd * cos + x_even * sin
             x_new = torch.cat([x_even_new, x_odd_new], dim=-1).reshape(x.shape[0], x.shape[1], size_per_head)
@@ -437,15 +439,13 @@ class CustomizedTest(object):
         
         def get_mask(input_lengths: torch.Tensor, context_lengths: torch.Tensor, max_q_len: int, max_kv_len: int, mask_dtype):
             batch_size = input_lengths.shape[0]
-            mask = torch.ones((batch_size, 1, max_q_len, max_kv_len), dtype=mask_dtype, device=input_lengths.device)
+            mask = torch.ones((batch_size, 1, max_q_len, max_kv_len), dtype=mask_dtype, device=input_lengths.device) * -10000.0
             for batch_idx in range(batch_size):
                 input_length = input_lengths[batch_idx].item()
                 context_length = context_lengths[batch_idx].item()
                 mask_this_batch = mask[batch_idx][0] # [max_q_len, max_kv_len] 
-                bool_mask = torch.ones((max_q_len, max_kv_len), dtype=torch.bool, device=input_lengths.device)
-                bool_mask[:input_length, :context_length - input_length] = False 
-                bool_mask[:input_length, context_length - input_length:context_length] = torch.tril(torch.ones(input_length, input_length, dtype=torch.bool), diagonal=0)
-                mask_this_batch += -10000 * bool_mask
+                mask_this_batch[:input_length, :context_length - input_length] = 0 
+                mask_this_batch[:input_length, context_length - input_length:context_length] = torch.tril(torch.zeros(input_length, input_length, dtype=mask_dtype), diagonal=0) + torch.triu(torch.ones(input_length, input_length, dtype=mask_dtype), diagonal=1) * -10000.0
                 
             return mask
         
@@ -495,21 +495,31 @@ class CustomizedTest(object):
         
         # calculate attention
         score = torch.matmul(q_cal, k_cal) # [batch_size, head_num, max_q_len, max_kv_len]
+        
         score = score / math.sqrt(size_per_head)
         mask = get_mask(input_lengths, context_lengths, max_q_len, max_kv_len, inoutput.dtype)
         score += mask
+        
         score = torch.softmax(score, dim=-1)
         atten_out = torch.matmul(score, v_cal) # [batch_size, head_num, max_q_len, size_per_head]
-        
         # update inoutput
         pre_batches_len = 0
         # inoutput: [token_num, hidden_units]
         atten_out = atten_out.permute(0, 2, 1, 3) # [batch_size, head_num, max_q_len, size_per_head] -> [batch_size, max_q_len, head_num, size_per_head]
         for batch_idx in range(batch_size):
             input_length = input_lengths[batch_idx].item()
-            inoutput[pre_batches_len: pre_batches_len + input_length, :] = atten_out[batch_idx, :input_length, :, :].reshape(input_length, -1) # [head, len, dim] -> [len, head, dim] -> [len, head*dim]
+            inoutput[pre_batches_len: pre_batches_len + input_length, :] = atten_out[batch_idx, :input_length, :, :].reshape(input_length, -1) # [len, head, dim] -> [len, head*dim]
+            pre_batches_len += input_length
+        return *key_cache, *value_cache, inoutput
+    
+    def fused_silu_ffn_inp(inoutput, weight1, weight2, weight3):
+        matW1 = torch.matmul(inoutput, weight1) # [token_num, inter_size]
+        matW1 = F.silu(matW1) # [token_num, inter_size]
+        matW3 = torch.matmul(inoutput, weight3) # [token_num, inter_size]
+        matW1 = matW1 * matW3 # [token_num, inter_size]
+        inoutput = torch.matmul(matW1, weight2) # [token_num, hidden_units]
         
-        return inoutput, key_cache, value_cache
+        return inoutput
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data

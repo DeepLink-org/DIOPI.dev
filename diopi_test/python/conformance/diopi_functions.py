@@ -7,7 +7,7 @@ import numpy as np
 import diopilib
 
 from collections import namedtuple
-from ctypes import c_double, byref
+from ctypes import c_double, c_int64, byref
 from .diopi_runtime import (
     Sizes,
     Scalar,
@@ -5382,28 +5382,61 @@ def fused_context_attention_inp(inoutput, qkv_weight, qkv_bias, key_cache, value
     call = "diopiFusedContextAttentionInp"
     func = check_function(call)
     
+    c_key_cahce_tensors = []
+    c_value_cache_tensors = []
+    for i in range(batch_size):
+        c_key_cahce_tensors.append(TensorP(key_cache[i]))
+        c_value_cache_tensors.append(TensorP(value_cache[i]))
+    
     fusion_level = 0
-    
-    pre_work_size = -1
     pre_work = None
-    workspace_size = -1
     workspace = None
-    # get workspace_size and pre_work_size
-    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, True, workspace, workspace_size, fusion_level, key_cache, value_cache, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
-    check_returncode(ret)
+    pre_work_size_c = ctypes.c_int64(-1)
+    pre_work_size = get_capsule(byref(pre_work_size_c))
+    workspace_size_c = ctypes.c_int64(-1)
+    workspace_size = get_capsule(byref(workspace_size_c))
     
+    # get workspace_size and pre_work_size
+    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, True, workspace, workspace_size, fusion_level, c_key_cahce_tensors, c_value_cache_tensors, batch_size, 
+               input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
+    check_returncode(ret)
     # create workspace
-    tmp_size = [workspace_size]
-    workspace = Tensor(tmp_size, Dtype.int8)
+    workspace_size_value = workspace_size_c.value
+    tmp_size = [workspace_size_value]
+    workspace = Tensor(tmp_size, Dtype.int8, device=inoutput.get_device())
     # create pre_work for attention_mask
     inoutput_type_size = 4 if inoutput.get_dtype() == Dtype.float32 else 2 
-    tmp_size = [max(pre_work_size, inoutput_type_size * batch_size, max_q_len * max_kv_len)]
-    pre_work = Tensor(tmp_size, Dtype.int8)
-    
+    pre_work_size_value = pre_work_size_c.value if pre_work_size_c.value > inoutput_type_size * batch_size * max_q_len * max_kv_len else inoutput_type_size * batch_size * max_q_len * max_kv_len
+    tmp_size = [pre_work_size_value]
+    pre_work = Tensor(tmp_size, Dtype.int8, device=inoutput.get_device())
     # prepare mask
-    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, False, workspace, workspace_size, fusion_level, key_cache, value_cache, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
+    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, False, workspace, workspace_size, fusion_level, c_key_cahce_tensors, c_value_cache_tensors, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
+    check_returncode(ret)
+    # do atten
+    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, True, workspace, workspace_size, fusion_level, c_key_cahce_tensors, c_value_cache_tensors, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
     check_returncode(ret)
     
-    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, pre_work, pre_work_size, True, workspace, workspace_size, fusion_level, key_cache, value_cache, batch_size, input_lengths, history_lengths, context_lengths, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, max_q_len, max_kv_len, rotary_embedding, rope_theta)
+    return *key_cache, *value_cache, inoutput 
+
+
+
+def fused_silu_ffn_inp(inoutput, weight1, weight2, weight3):
+    call = "diopiFusedSiluFfnInp"
+    func = check_function(call)
+    workspace = None
+    workspace_size_c = ctypes.c_int64(-1)
+    workspace_size = get_capsule(byref(workspace_size_c))
+    ret = func(inoutput.context(), inoutput, weight1, weight2, weight3, workspace, workspace_size, 0)
     check_returncode(ret)
-    return inoutput, key_cache, value_cache
+    
+    workspace_size_value = workspace_size_c.value
+    tmp_size = [workspace_size_value]
+    workspace = Tensor(tmp_size, Dtype.int8, context=inoutput.context())
+    ret = func(inoutput.context(), inoutput, weight1, weight2, weight3, workspace, workspace_size, 0)
+    check_returncode(ret)
+    
+    return inoutput 
+
+# DIOPI_API diopiError_t diopiFusedSiluFfnInp(diopiContextHandle_t ctx, diopiTensorHandle_t inoutput, diopiConstTensorHandle_t weight1,
+#                                             diopiConstTensorHandle_t weight2, diopiConstTensorHandle_t weight3, diopiTensorHandle_t workspace,
+#                                             int64_t* workspace_size, int64_t fusion_level);
