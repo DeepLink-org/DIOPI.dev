@@ -5462,6 +5462,9 @@ def fused_silu_ffn_inp(inoutput, weight1, weight2, weight3):
     
     return inoutput 
 
-# DIOPI_API diopiError_t diopiFusedSiluFfnInp(diopiContextHandle_t ctx, diopiTensorHandle_t inoutput, diopiConstTensorHandle_t weight1,
-#                                             diopiConstTensorHandle_t weight2, diopiConstTensorHandle_t weight3, diopiTensorHandle_t workspace,
-#                                             int64_t* workspace_size, int64_t fusion_level);
+def setup_topk_runtime_args(top_ks, top_ps, skip_decode, batch_size, top_k, top_ks_size, top_p, top_ps_size):
+    call = "diopiSetupTopkRuntimeArgsInp"
+    func = check_function(call)
+    ret = func(top_ks.context(), top_ks, top_ps, skip_decode, batch_size, top_k, top_ks_size, top_p, top_ps_size)
+    check_returncode(ret)
+    return top_ks, top_ps, skip_decode

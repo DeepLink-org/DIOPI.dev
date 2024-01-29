@@ -547,14 +547,13 @@ class CustomizedTest(object):
         lengths = step - 1 - total_padding_tokens
         q = rope(q, lengths, rotary_embedding, rope_theta) 
         k = rope(k, lengths, rotary_embedding, rope_theta)
-        # return q.reshape(batch_size, local_head_num, size_per_head // 2, 2), k.reshape(batch_size, local_kv_head_num, size_per_head // 2, 2)
         for batch_idx in range(batch_size):
             if finished[batch_idx]:
                 continue
             sequence_length = sequence_lengths[batch_idx].item()
-            tlength = sequence_length   # 3
-            first_step = max(0, tlength + 1 - max_seq_len)  # max(0, 3 + 1 - 5) = 0
-            tlength_circ = tlength % max_seq_len     # 3 % 5 = 3
+            tlength = sequence_length
+            first_step = max(0, tlength + 1 - max_seq_len)
+            tlength_circ = tlength % max_seq_len
             
             # 1. q
             q_cal_i = q[batch_idx, :, :].reshape(1, local_head_num, size_per_head).permute(1, 0, 2)  #[head_num, 1, size_per_head] 
@@ -565,9 +564,9 @@ class CustomizedTest(object):
             k_cache_i[:, tlength_circ, :] = k[batch_idx, :, :]
             # 2.2 get k_cal_i
             
-            kvi_beg = first_step % max_seq_len   # 0 % 5 = 0
+            kvi_beg = first_step % max_seq_len
             # kvi_beg = first_step % max_seq_len = max(0, tlength + 1 - max_seq_len) % max_seq_len
-            kvi_end = tlength % max_seq_len    # 3 % 5 = 3
+            kvi_end = tlength % max_seq_len
             # kvi_end = tlength % max_seq_len;
             
             cat_kcal = []
@@ -622,6 +621,24 @@ class CustomizedTest(object):
         matW1 = matW1 * matW3 # [token_num, inter_size]
         inoutput = torch.matmul(matW1, weight2) # [token_num, hidden_units]
         return inoutput
+    
+    def setup_topk_runtime_args(top_ks, top_ps, skip_decode, batch_size, top_k, top_ks_size, top_p, top_ps_size):
+        top_k_max = 1024
+        for batch_idx in range(batch_size):
+            k = top_ks[batch_idx].item() if top_ks_size > 1 else top_k
+            p = top_ps[batch_idx].item() if top_ps_size > 1 else top_p
+            
+            if k == 0 and p == 0.0:
+                k = 1
+            if k > 0 and p == 0.0:
+                p = 1.0
+
+            top_ks[batch_idx] = min(k, top_k_max)
+            top_ps[batch_idx] = max(min(p, 1.0), 0.0)
+            skip_decode[batch_idx] = k == 0
+            
+        return top_ks, top_ps, skip_decode
+    
     
 class GenOutputData(object):
     r'''

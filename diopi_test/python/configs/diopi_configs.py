@@ -8981,4 +8981,38 @@ diopi_configs = {
             ]
         )
     ),
+    
+    'setup_topk_runtime_args' : dict(
+        name=['setup_topk_runtime_args'],
+        interface=['CustomizedTest'],
+        para=dict(
+            batch_size = [2, 3],
+            top_k = [0 ,1],
+            top_p = [0.0, 0.5],
+            top_ks_size = [1, 2],
+            top_ps_size = [1, 2]
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['top_ks'],                 # [batch_size]
+                    "shape": ((2, ), (3,)),      
+                    "dtype": [np.int64, np.int32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['top_ps'],              # [batch_size]
+                    "shape": ((2,), (3, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['skip_decode'],    # [batch_size]
+                    "value": ([False, False], [False, False, False]),
+                    "dtype": [np.bool_],
+                    "gen_policy": "gen_tensor_by_value",
+                }
+            ]
+        )
+    ),
 }
