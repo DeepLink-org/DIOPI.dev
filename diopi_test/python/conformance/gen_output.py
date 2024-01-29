@@ -435,6 +435,7 @@ class CustomizedTest(object):
             x_even_new = x_even * cos - x_odd * sin
             x_odd_new = x_odd * cos + x_even * sin
             x_new = torch.cat([x_even_new, x_odd_new], dim=-1).reshape(x.shape[0], x.shape[1], size_per_head)
+            x_new = x_new.to(x.dtype)
             return x_new
         
         def get_mask(input_lengths: torch.Tensor, context_lengths: torch.Tensor, max_q_len: int, max_kv_len: int, mask_dtype):
@@ -512,14 +513,116 @@ class CustomizedTest(object):
             pre_batches_len += input_length
         return *key_cache, *value_cache, inoutput
     
+    
+    def fused_decoder_attention_inp(inoutput, qkv_weight, qkv_bias, key_cache, value_cache, batch_size, finished, total_padding_tokens, sequence_lengths, step, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, rotary_embedding, rope_theta):
+        qkv = torch.matmul(inoutput, qkv_weight) # [batch_size, hidden_units] * [hidden_units, (local_head_num+local_kv_head_num*2)*size_per_head]
+        if qkv_bias is not None:
+            qkv += qkv_bias
+        q = qkv[:, :local_head_num*size_per_head].reshape(batch_size, local_head_num, size_per_head)  # [batch, head, dim]
+        k = qkv[:, local_head_num*size_per_head: (local_head_num+local_kv_head_num)*size_per_head].reshape(batch_size, local_kv_head_num, size_per_head)
+        v = qkv[:, (local_head_num+local_kv_head_num)*size_per_head:].reshape(batch_size, local_kv_head_num, size_per_head)
+        
+        def rope(x: torch.Tensor, timestamp: torch.Tensor, rotary_embedding: float, rope_theta: float) -> torch.Tensor:
+            # x (torch.Tensor): [batch_size, head_num, size_per_head]
+            batch_size = x.shape[0]
+            head_num = x.shape[1]
+            # input_len = x.shape[0]
+            # head_num = x.shape[1]
+            x = x.reshape(batch_size, head_num, size_per_head // 2, 2)
+            # x_odd, x_even: [batch_size, head_num, size_per_head // 2, 1]
+            x_even = x[:, :, :, 0].reshape(batch_size, head_num, size_per_head // 2, 1)
+            x_odd = x[:, :, : ,1].reshape(batch_size, head_num, size_per_head // 2, 1)
+            # theta: [size_per_head // 2], theta[i] = pow(rope_theta, -2 * i / rotary_embedding)
+            theta = torch.pow(rope_theta, -2 * torch.arange(size_per_head // 2, dtype=torch.float32, device=x.device) / rotary_embedding)
+            # timestamp: [batch_size]
+            # sin, cos: [batch_size, 1, size_per_head // 2, 1]
+            cos = torch.cos(timestamp.view(-1, 1) * theta.view(1, -1)).reshape(batch_size, 1, size_per_head // 2, 1)
+            sin = torch.sin(timestamp.view(-1, 1) * theta.view(1, -1)).reshape(batch_size, 1, size_per_head // 2, 1)
+            x_even_new = x_even * cos - x_odd * sin
+            x_odd_new = x_odd * cos + x_even * sin
+            x_new = torch.cat([x_even_new, x_odd_new], dim=-1).reshape(x.shape[0], x.shape[1], size_per_head)
+            x_new = x_new.to(x.dtype)
+            return x_new
+        
+        lengths = step - 1 - total_padding_tokens
+        q = rope(q, lengths, rotary_embedding, rope_theta) 
+        k = rope(k, lengths, rotary_embedding, rope_theta)
+        # return q.reshape(batch_size, local_head_num, size_per_head // 2, 2), k.reshape(batch_size, local_kv_head_num, size_per_head // 2, 2)
+        for batch_idx in range(batch_size):
+            if finished[batch_idx]:
+                continue
+            sequence_length = sequence_lengths[batch_idx].item()
+            tlength = sequence_length   # 3
+            first_step = max(0, tlength + 1 - max_seq_len)  # max(0, 3 + 1 - 5) = 0
+            tlength_circ = tlength % max_seq_len     # 3 % 5 = 3
+            
+            # 1. q
+            q_cal_i = q[batch_idx, :, :].reshape(1, local_head_num, size_per_head).permute(1, 0, 2)  #[head_num, 1, size_per_head] 
+            
+            # 2. k
+            k_cache_i = key_cache[batch_idx][layer_id, :, :, :] # [head_num, max_seq_len, size_per_head]
+            # 2.1 store to key_cache
+            k_cache_i[:, tlength_circ, :] = k[batch_idx, :, :]
+            # 2.2 get k_cal_i
+            
+            kvi_beg = first_step % max_seq_len   # 0 % 5 = 0
+            # kvi_beg = first_step % max_seq_len = max(0, tlength + 1 - max_seq_len) % max_seq_len
+            kvi_end = tlength % max_seq_len    # 3 % 5 = 3
+            # kvi_end = tlength % max_seq_len;
+            
+            cat_kcal = []
+            if kvi_beg > kvi_end:
+                catki_cache_beg_gt = k_cache_i[:, kvi_beg:, :] # [head_num, max_seq_len - kvi_beg, size_per_head]
+                cat_kcal.append(catki_cache_beg_gt)
+                if kvi_end > 0:
+                    catki_cache_end_gt = k_cache_i[:, :kvi_end, :] # [head_num, kvi_end, size_per_head]
+                    cat_kcal.append(catki_cache_end_gt)
+            elif kvi_beg < kvi_end:
+                catki_cache_end_lt = k_cache_i[:, kvi_beg:kvi_end, :] # [head_num, kvi_end - kvi_beg, size_per_head]
+                cat_kcal.append(catki_cache_end_lt)
+
+            cat_kcal.append(k[batch_idx, :, :].reshape(local_kv_head_num, 1, size_per_head)) 
+            
+            k_cal_i = torch.cat(cat_kcal, dim=1) # [head_num, tlength - first_step + 1, size_per_head]
+            k_cal_i = k_cal_i.permute(0, 2, 1)
+            
+            # 3. v
+            v_cache_i = value_cache[batch_idx][layer_id, :, :, :] # [head_num, max_seq_len, size_per_head]
+            # 3.1 store to value_cache
+            v_cache_i[:, tlength_circ, :] = v[batch_idx, :, :]
+            # 3.2 get v_cal_i
+            cat_vcal = []
+            if kvi_beg > kvi_end:
+                catvi_cache_beg_gt = v_cache_i[:, kvi_beg:, :]
+                cat_vcal.append(catvi_cache_beg_gt)
+                if kvi_end > 0:
+                    catvi_cache_end_gt = v_cache_i[:, :kvi_end, :]
+                    cat_vcal.append(catvi_cache_end_gt)
+            elif kvi_beg < kvi_end:
+                catvi_cache_end_lt = v_cache_i[:, kvi_beg:kvi_end, :]
+                cat_vcal.append(catvi_cache_end_lt)
+                
+            cat_vcal.append(v[batch_idx, :, :].reshape(local_kv_head_num, 1, size_per_head))
+            
+            v_cal_i = torch.cat(cat_vcal, dim=1) # [head_num, tlength - first_step + 1, size_per_head]
+            
+            # 4. cal
+            qki =torch.matmul(q_cal_i, k_cal_i) # [head_num, 1, seq_len + 1]            
+            qki = qki / math.sqrt(size_per_head)
+            qki = torch.softmax(qki, dim=-1)
+            inouti = torch.matmul(qki, v_cal_i) # [head_num, 1, size_per_head]
+            inoutput[batch_idx, :] = inouti.reshape(local_head_num * size_per_head)
+        
+        return *key_cache, *value_cache, inoutput
+
     def fused_silu_ffn_inp(inoutput, weight1, weight2, weight3):
         matW1 = torch.matmul(inoutput, weight1) # [token_num, inter_size]
         matW1 = F.silu(matW1) # [token_num, inter_size]
         matW3 = torch.matmul(inoutput, weight3) # [token_num, inter_size]
         matW1 = matW1 * matW3 # [token_num, inter_size]
         inoutput = torch.matmul(matW1, weight2) # [token_num, hidden_units]
-        
         return inoutput
+    
 class GenOutputData(object):
     r'''
     Generate output data for all functions by using numpy and input data

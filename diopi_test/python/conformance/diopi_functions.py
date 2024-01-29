@@ -5418,7 +5418,32 @@ def fused_context_attention_inp(inoutput, qkv_weight, qkv_bias, key_cache, value
     
     return *key_cache, *value_cache, inoutput 
 
-
+def fused_decoder_attention_inp(inoutput, qkv_weight, qkv_bias, key_cache, value_cache, batch_size, finished, total_padding_tokens, sequence_lengths, step, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, rotary_embedding, rope_theta):
+    call = "diopiFusedDecoderAttentionInp"
+    func = check_function(call)
+    
+    c_key_cahce_tensors = []
+    c_value_cache_tensors = []
+    for i in range(batch_size):
+        c_key_cahce_tensors.append(TensorP(key_cache[i]))
+        c_value_cache_tensors.append(TensorP(value_cache[i]))
+    
+    fusion_level = 0
+    
+    workspace_size_c = ctypes.c_int64(-1)
+    workspace_size = get_capsule(byref(workspace_size_c))
+    
+    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, None, workspace_size, fusion_level, c_key_cahce_tensors, c_value_cache_tensors, batch_size, finished, total_padding_tokens, sequence_lengths, step, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, rotary_embedding, rope_theta)
+    check_returncode(ret)
+    
+    workspace_size_value = workspace_size_c.value
+    tmp_size = [workspace_size_value]
+    workspace = Tensor(tmp_size, Dtype.int8, device=inoutput.get_device())
+    
+    ret = func(inoutput.context(), inoutput, qkv_weight, qkv_bias, workspace, workspace_size, fusion_level, c_key_cahce_tensors, c_value_cache_tensors, batch_size, finished, total_padding_tokens, sequence_lengths, step, layer_id, local_head_num, local_kv_head_num, size_per_head, max_seq_len, rotary_embedding, rope_theta)
+    check_returncode(ret)
+    
+    return *key_cache, *value_cache, inoutput
 
 def fused_silu_ffn_inp(inoutput, weight1, weight2, weight3):
     call = "diopiFusedSiluFfnInp"

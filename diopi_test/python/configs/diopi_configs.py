@@ -8876,6 +8876,79 @@ diopi_configs = {
         )
     ),
     
+    'fused_decoder_attention_inp' : dict(
+        name=['fused_decoder_attention_inp'],
+        interface=['CustomizedTest'],
+        atol=1e-3,
+        rtol=1e-4,
+        para=dict(
+            step=[7, 8],
+            layer_id=[0, 1],
+            local_head_num=[3, 2],
+            local_kv_head_num=[3, 2],
+            size_per_head=[10, 6],
+            max_seq_len=[10, 12],
+            rotary_embedding=[20, 20],
+            rope_theta=[10000.0, 10000.0],
+            batch_size=[3, 3],
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['inoutput'],
+                    "shape": ((3, 30), (3, 12)),               # [batch_size, hidden(size_per_head * head_num)]
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['qkv_weight'],
+                    "shape": ((30, 90), (12, 36)),            # [hidden, head_num * 3 * size_per_head]
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['qkv_bias'],
+                    "shape": ((1, 90), (1, 36)),               # [1, (local_head_num+local_kv_head_num*2)*size_per_head]
+                    "dtype": [np.float32, np.float16],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['key_cache'],
+                    "dtype": [np.float32, np.float16],
+                    "shape": ((3, 3, 10, 10), (3, 2, 12, 6)),                     # [num_layer, local_kv_head_num, max_seq_len, size_per_head]
+                    "gen_policy": 'gen_tensor_list',
+                    "gen_num_range": [3, 4]                          # num = batch_size
+                },
+                {
+                    "ins": ['value_cache'],
+                    "dtype": [np.float32, np.float16],
+                    "shape": ((3, 3, 10, 10), (3, 2, 12, 6)),                     # [num_layer, local_kv_head_num, max_seq_len, size_per_head]
+                    "gen_policy": 'gen_tensor_list',
+                    "gen_num_range": [3, 4]                          # num = batch_size
+                },
+                {
+                    "ins": ['finished'],
+                    "value": ([False, True, False], [False, False, False]),
+                    "dtype": [np.bool_],
+                    "gen_policy": "gen_tensor_by_value",
+                },
+                {
+                    "ins": ['total_padding_tokens'],
+                    "value": ([2, 1, 0], [0, 2, 1]),
+                    "dtype": [np.int32],
+                    "gen_policy": "gen_tensor_by_value",
+                },
+                {
+                    "ins": ['sequence_lengths'],
+                    "value": ([4, 5, 6], [7, 5, 6]),
+                    "dtype": [np.int32],
+                    "gen_policy": "gen_tensor_by_value",
+                }
+            ]
+        )
+    ),
+    
+    
     'fused_silu_ffn_inp' : dict(
         name=['fused_silu_ffn_inp'],
         interface=['CustomizedTest'],
