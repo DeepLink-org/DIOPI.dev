@@ -89,5 +89,6 @@ ops_with_states = {"batch_norm": {"running_mean", "running_var"},
                    "fused_context_attention_inp": {"inoutput", "key_cache", "value_cache"},
                    "fused_decoder_attention_inp": {"inoutput", "key_cache", "value_cache"},
                    "fused_silu_ffn_inp": {"inoutput"},
-                   "setup_topk_runtime_args": {"top_ks", "top_ps", "skip_decode"}
+                   "setup_topk_runtime_args": {"top_ks", "top_ps", "skip_decode"},
+                   "setup_topp_runtime_args": {"top_ks", "top_ps", "skip_decode", "initial_top_p_buf", "top_p_decay_buf", "top_p_min_buf", "top_p_reset_ids_buf"}
                    }

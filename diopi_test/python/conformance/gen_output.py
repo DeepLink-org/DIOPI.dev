@@ -639,6 +639,29 @@ class CustomizedTest(object):
             
         return top_ks, top_ps, skip_decode
     
+    def setup_topp_runtime_args(top_ks, top_ps, skip_decode, batch_size, top_k, top_ks_size, top_p, top_ps_size, initial_top_p_buf, top_p_decay_buf, top_p_decay, top_p_min_buf, top_p_min, top_p_reset_ids_buf, top_p_reset_ids):
+        top_p_decay_buf = torch.ones(batch_size, dtype=torch.float32) if top_p_decay is None else top_p_decay
+        top_p_min_buf = torch.ones(batch_size, dtype=torch.float32) * 1e-6 if top_p_min is None else top_p_min
+        top_p_reset_ids_buf = torch.ones(batch_size, dtype=torch.int64) * -1 if top_p_reset_ids is None else top_p_reset_ids
+        
+        for batch_idx in range(batch_size):
+            k = top_ks[batch_idx].item() if top_ks_size > 1 else top_k
+            p = top_ps[batch_idx].item() if top_ps_size > 1 else top_p
+            if k == 0 and p == 0.0:
+                k = 1
+            top_ks[batch_idx] = k
+            top_ps[batch_idx] = max(min(p, 1.0), 0.0)
+            skip_decode[batch_idx] = k > 0
+            
+            if top_p_decay is not None and (top_p_decay_buf[batch_idx] > 1.0 or top_p_decay_buf[batch_idx] <= 0.0):
+                top_p_decay_buf[batch_idx] = 1.0
+            
+            if top_p_min is not None and (top_p_min_buf[batch_idx] > 1.0 or top_p_min_buf[batch_idx] <= 0.0):
+                top_p_min_buf[batch_idx] = 0.5
+            
+        initial_top_p_buf = top_ps.clone()
+        
+        return top_ks, top_ps, skip_decode, initial_top_p_buf, top_p_decay_buf, top_p_min_buf, top_p_reset_ids_buf
     
 class GenOutputData(object):
     r'''

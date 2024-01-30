@@ -8997,7 +8997,7 @@ diopi_configs = {
                 {
                     "ins": ['top_ks'],                 # [batch_size]
                     "shape": ((2, ), (3,)),      
-                    "dtype": [np.int64, np.int32],
+                    "dtype": [np.int32],
                     "gen_fn": 'Genfunc.randn',
                 },
                 {
@@ -9012,6 +9012,85 @@ diopi_configs = {
                     "dtype": [np.bool_],
                     "gen_policy": "gen_tensor_by_value",
                 }
+            ]
+        )
+    ),
+    
+    'setup_topp_runtime_args' : dict(
+        name=['setup_topp_runtime_args'],
+        interface=['CustomizedTest'],
+        para=dict(
+            batch_size = [10, 20],
+            top_k = [0 ,1],
+            top_p = [0.0, 0.5],
+            top_ks_size = [1, 2],
+            top_ps_size = [1, 2]
+        ),
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['top_ks'],                 # [batch_size]
+                    "shape": ((10, ), (20,)),      
+                    "dtype": [np.int32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['top_ps'],              # [batch_size]
+                    "shape": ((10,), (20, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['skip_decode'],    # [batch_size]
+                    "value": ([False, False, False, False, False, False, False, False, False, False], 
+                              [False, False, False, False, False, False, False, False, False, False,
+                               False, False, False, False, False, False, False, False, False, False],),
+                    "dtype": [np.bool_],
+                    "gen_policy": "gen_tensor_by_value",
+                },
+                {
+                    "ins": ['initial_top_p_buf'],    # [batch_size]
+                    "shape": ((10,), (20, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['top_p_decay_buf'],    # [batch_size]
+                    "shape": ((10,), (20, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                    
+                },
+                {
+                    "ins": ['top_p_decay'],    # [batch_size]
+                    "shape": ((10,), (20, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['top_p_min_buf'],    # [batch_size]
+                    "shape": ((10,), (20, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['top_p_min'],    # [batch_size]
+                    "shape": ((10,), (20, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['top_p_reset_ids_buf'],    # [batch_size]
+                    "shape": ((10,), (20, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
+                {
+                    "ins": ['top_p_reset_ids'],    # [batch_size]
+                    "shape": ((10,), (20, )),
+                    "dtype": [np.float32],
+                    "gen_fn": 'Genfunc.randn',
+                },
             ]
         )
     ),

@@ -5460,7 +5460,7 @@ def fused_silu_ffn_inp(inoutput, weight1, weight2, weight3):
     ret = func(inoutput.context(), inoutput, weight1, weight2, weight3, workspace, workspace_size, 0)
     check_returncode(ret)
     
-    return inoutput 
+    return inoutput
 
 def setup_topk_runtime_args(top_ks, top_ps, skip_decode, batch_size, top_k, top_ks_size, top_p, top_ps_size):
     call = "diopiSetupTopkRuntimeArgsInp"
@@ -5468,3 +5468,10 @@ def setup_topk_runtime_args(top_ks, top_ps, skip_decode, batch_size, top_k, top_
     ret = func(top_ks.context(), top_ks, top_ps, skip_decode, batch_size, top_k, top_ks_size, top_p, top_ps_size)
     check_returncode(ret)
     return top_ks, top_ps, skip_decode
+
+def setup_topp_runtime_args(top_ks, top_ps, skip_decode, batch_size, top_k, top_ks_size, top_p, top_ps_size, initial_top_p_buf, top_p_decay_buf, top_p_decay, top_p_min_buf, top_p_min, top_p_reset_ids_buf, top_p_reset_ids):
+    call = "diopiSetupToppRuntimeArgsInp"
+    func = check_function(call)
+    ret = func(top_ks.context(), top_ks, top_ps, skip_decode, batch_size, top_k, top_ks_size, top_p, top_ps_size, initial_top_p_buf, top_p_decay_buf, top_p_decay, top_p_min_buf, top_p_min, top_p_reset_ids_buf, top_p_reset_ids)
+    check_returncode(ret)
+    return top_ks, top_ps, skip_decode, initial_top_p_buf, top_p_decay_buf, top_p_min_buf, top_p_reset_ids_buf
