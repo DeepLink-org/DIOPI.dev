@@ -17,6 +17,7 @@ class OpTemplate(object):
 #include <diopi/functions.h>
 #include <diopi/functions_ext.h>
 #include <diopi/functions_lmdeploy.h>
+#define PYBIND11_DETAILED_ERROR_MESSAGES
 namespace py = pybind11;
 
 PYBIND11_MODULE(export_functions, m) {
@@ -46,6 +47,6 @@ m.def("${func_name}", [](${attrs}) {
     vector_template = CodeTemplate("""\
 std::vector<${handle_type}> ${param}V(${param_num});
 for (int i = 0; i < ${param_num}; ++i)
-    ${param}V[i] = ${param}[i].cast<PtrWrapper<diopiTensor>>().get();
+    ${param}V[i] = ${param}[i].cast<PtrWrapper<${param_type}>>().get();
 auto ${param}DIOPI = ${param}V.data();
 """)

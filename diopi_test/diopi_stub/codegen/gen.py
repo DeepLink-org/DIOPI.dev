@@ -10,7 +10,7 @@ from op_template import OpTemplate as OT
 from filemanager import FileManager
 
 tensor_ptr = ['diopiTensorHandle_t*', 'diopiConstTensorHandle_t*']
-
+generator_ptr = ['diopiGeneratorHandle_t*', 'diopiConstGeneratorHandle_t*']
 type_convert_dict = {
     'int64_t*': 'void*',
     'double*': 'void*'
@@ -48,6 +48,7 @@ def get_func_info(content):
     attr_types = []
     paras_can_be_none = []
     ins_vector, outs_vector = {}, {}
+    ins_generator_vector, outs_generator_vector = {}, {}
     out_ptr = []
     type_change = False
     row = content.replace('\n', '').replace('(', ',').replace(')', '')
@@ -92,12 +93,42 @@ def get_func_info(content):
                     type_change = True
                     out_ptr.append(arg_index)
                     arg_type = 'PtrWrapper<diopiTensor>'
+            
+            if arg_type in generator_ptr:
+                for i in range(index + 1, len(arg_define)):
+                    next_arg = arg_define[i].strip(' ').split(' ')
+                    if next_arg == 3:
+                        assert arg_type == 'diopiGeneratorHandle_t*'
+                        type_change = True
+                        out_ptr.append(arg_index)
+                        arg_type = 'PtrWrapper<diopiGenerator>'
+                        break
+                    elif next_arg[0] == 'int64_t':
+                        type_change = True
+                        if arg_type == 'diopiGeneratorHandle_t*':
+                            outs_generator_vector[arg_index] = next_arg[1]
+                        else:
+                            ins_generator_vector[arg_index] = next_arg[1]
+                        arg_type = 'py::list&'
+                        break
+                    elif next_arg[0] in generator_ptr:
+                        continue
+                    else:
+                        type_change = True
+                        assert arg_type == 'diopiGeneratorHandle_t*'
+                        out_ptr.append(arg_index)
+                        arg_type = 'PtrWrapper<diopiGenerator>'
+                        break
+                if index == len(arg_define) - 1 and arg_type == 'diopiGeneratorHandle_t*':
+                    type_change = True
+                    out_ptr.append(arg_index)
+                    arg_type = 'PtrWrapper<diopiGenerator>'
             args.append(arg)
             attr_types.append(arg_type)
             if arg_type in can_be_none:
                 paras_can_be_none.append(len(args) - 1)
             arg_index += 1
-    return type_change, args, attr_types, paras_can_be_none, ins_vector, outs_vector, out_ptr
+    return type_change, args, attr_types, paras_can_be_none, ins_vector, outs_vector, ins_generator_vector, outs_generator_vector, out_ptr
 
 
 def get_export(content, ft, exports):
@@ -115,7 +146,7 @@ def get_export(content, ft, exports):
                 idx2 = row1.find(")")
                 temp_content += row1.replace(';', '')
                 idx += 1
-            type_change, args, attr_types, paras_none, ins_vector, outs_vector, out_ptr = get_func_info(temp_content)
+            type_change, args, attr_types, paras_none, ins_vector, outs_vector, ins_generator_vector, outs_generator_vector, out_ptr = get_func_info(temp_content)
             call_args = copy.deepcopy(args)
             type_change = True
             if type_change:
@@ -130,12 +161,21 @@ def get_export(content, ft, exports):
                         attrs.append(attr_types[index] + ' ' + call_args[index])
                 for vector in ins_vector:
                     convert += OT.vector_template.substitute(env=dict(param=call_args[vector], param_num=ins_vector[vector],
-                                                             param_type=attr_types[vector], handle_type='diopiConstTensorHandle_t'))
+                                                             param_type="diopiTensor", handle_type='diopiConstTensorHandle_t'))
                     call_args[vector] = call_args[vector] + 'DIOPI'
                 for vector in outs_vector:
                     convert += OT.vector_template.substitute(env=dict(param=call_args[vector], param_num=outs_vector[vector],
-                                                             param_type=attr_types[vector], handle_type='diopiTensorHandle_t'))
+                                                             param_type="diopiTensor", handle_type='diopiTensorHandle_t'))
                     call_args[vector] = call_args[vector] + 'DIOPI'
+                for vector in ins_generator_vector:
+                    convert += OT.vector_template.substitute(env=dict(param=call_args[vector], param_num=ins_generator_vector[vector],
+                                                             param_type="diopiGenerator", handle_type='diopiConstGeneratorHandle_t'))
+                    call_args[vector] = call_args[vector] + 'DIOPI'
+                for vector in outs_generator_vector:
+                    convert += OT.vector_template.substitute(env=dict(param=call_args[vector], param_num=outs_generator_vector[vector],
+                                                             param_type="diopiGenerator", handle_type='diopiGeneratorHandle_t'))
+                    call_args[vector] = call_args[vector] + 'DIOPI'
+                
                 for out in out_ptr:
                     convert += "diopiTensorHandle_t {param}Handle = nullptr;\n".format(param=call_args[out])
                     out_copy += "if ({param}.get() != nullptr)\n \

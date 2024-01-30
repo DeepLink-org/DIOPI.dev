@@ -1806,9 +1806,9 @@ DIOPI_API diopiError_t diopiSetupToppRuntimeArgsInp(diopiContextHandle_t ctx, di
 
 DIOPI_API diopiError_t diopiTopKSampling(diopiContextHandle_t ctx, diopiTensorHandle_t output_ids, diopiTensorHandle_t logits, diopiTensorHandle_t workspace,
                                          int64_t* workspace_size, int64_t fusion_level, diopiConstTensorHandle_t end_ids, diopiTensorHandle_t finished,
-                                         diopiTensorHandle_t sequence_lengths, int64_t step, int64_t batch_size, int64_t vocab_size_padded,
+                                         diopiTensorHandle_t sequence_lengths, int64_t step, int64_t vocab_size_padded,
                                          diopiConstTensorHandle_t runtime_top_k, diopiConstTensorHandle_t runtime_top_p, diopiConstTensorHandle_t skip_decode,
-                                         diopiTensorHandle_t cum_log_probs, diopiTensorHandle_t output_log_probs, diopiGeneratorHandle_t* generators) {
+                                         diopiTensorHandle_t cum_log_probs, diopiTensorHandle_t output_log_probs, diopiGeneratorHandle_t* generators, int64_t batch_size) {
     if (fusion_level >= 0) {
         // vocab_size_padded == vocab_size in llamav2.cc
         // workspace_size
@@ -2135,11 +2135,11 @@ DIOPI_API diopiError_t diopiTopKSampling(diopiContextHandle_t ctx, diopiTensorHa
 DIOPI_API diopiError_t diopiTopPSampling(diopiContextHandle_t ctx, diopiTensorHandle_t output_ids, diopiTensorHandle_t logits,
                                          diopiTensorHandle_t persistent_workspace, int64_t* persistent_workspace_size, diopiTensorHandle_t workspace,
                                          int64_t* workspace_size, int64_t fusion_level, diopiConstTensorHandle_t end_ids, diopiTensorHandle_t finished,
-                                         diopiTensorHandle_t sequence_lengths, int64_t step, int64_t batch_size, int64_t vocab_size_padded,
+                                         diopiTensorHandle_t sequence_lengths, int64_t step, int64_t vocab_size_padded,
                                          diopiTensorHandle_t runtime_top_p, diopiConstTensorHandle_t runtime_initial_top_p,
                                          diopiConstTensorHandle_t top_p_decay_buf, diopiConstTensorHandle_t top_p_min_buf,
                                          diopiConstTensorHandle_t top_p_reset_ids_buf, diopiConstTensorHandle_t skip_decode, diopiTensorHandle_t cum_log_probs,
-                                         diopiTensorHandle_t output_log_probs, diopiGeneratorHandle_t* generators) {
+                                         diopiTensorHandle_t output_log_probs, diopiGeneratorHandle_t* generators, int64_t batch_size) {
     if (fusion_level >= 0) {
         // workspace_size
         diopiSize_t shapeinfo;
