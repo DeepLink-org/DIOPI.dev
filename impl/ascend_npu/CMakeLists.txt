@@ -167,9 +167,11 @@ set(OLD_IMPL_SRC
     ${OLD_IMPL_DIR}/functions/linspace.cpp
     ${OLD_IMPL_DIR}/functions/split.cpp
     ${OLD_IMPL_DIR}/functions_ext/rms_norm.cpp
+    ${OLD_IMPL_DIR}/functions_ext/flash_attention.cpp
     #${OLD_IMPL_DIR}/test/export_functions.cpp
     #${OLD_IMPL_DIR}/test/conform_test.cpp
     ${OLD_IMPL_DIR}/aclnn/adaptor.cpp
+    ${OLD_IMPL_DIR}/aclnn/aclnn.cpp
     ${OLD_IMPL_DIR}/common/utils.cpp
     ${OLD_IMPL_DIR}/common/debug.cpp
     ${OLD_IMPL_DIR}/common/generator_helper.cpp
