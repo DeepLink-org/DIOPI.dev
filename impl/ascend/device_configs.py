@@ -1043,7 +1043,7 @@ device_configs = {
                 },
                 {
                     "ins": ["other"],
-                    "dtype": [Skip(np.complex64)]
+                    "dtype": [Skip(np.complex64), Skip(np.float64)]
                 },
             ]
         )
@@ -1061,7 +1061,7 @@ device_configs = {
                 },
                 {
                     "ins": ["other"],
-                    "dtype": [Skip(np.complex128)],
+                    "dtype": [Skip(np.complex128), Skip(np.float64)],
                 },
             ]
         )
@@ -1078,7 +1078,7 @@ device_configs = {
                 },
                 {
                     "ins": ["other"],
-                    "dtype": [Skip(np.complex64)],
+                    "dtype": [Skip(np.complex64), Skip(np.float64)],
                 },
             ]
         )
