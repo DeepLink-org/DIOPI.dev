@@ -34,8 +34,8 @@ diopiError_t nllLossOutWithTotalWeight(diopiContextHandle_t ctx, diopiTensorHand
 
     int64_t batch = 1;
     if (inputShape.len > 2) {
-        std::vector<int64_t> inputCopyShapeVec;
-        std::vector<int64_t> permuteDimVec;
+        AscendTensor::ShapeType inputCopyShapeVec;
+        AscendTensor::ShapeType permuteDimVec;
         inputCopyShapeVec.push_back(inputShape.data[0]);
         permuteDimVec.push_back(0);
         for (int i = 1; i < inputShape.len - 1; i++) {
@@ -129,7 +129,7 @@ std::string getReductionStr(const diopiReduction_t reduction) {
 
 diopiError_t diopiNLLLoss(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, diopiConstTensorHandle_t target,
                           diopiConstTensorHandle_t weight, diopiReduction_t reduction, int64_t ignoreIndex) {
-    auto totalWeightSizeVec = std::vector<int64_t>({1});
+    auto totalWeightSizeVec = AscendTensor::ShapeType({1});
     auto totalWeightSize = vectorToDiopiSize(totalWeightSizeVec);
     diopiTensorHandle_t totalWeight, weightCopy;
     AscendTensor inputAt(input);
@@ -158,7 +158,7 @@ diopiError_t diopiNLLLoss(diopiContextHandle_t ctx, diopiTensorHandle_t out, dio
 
 diopiError_t diopiNLLLossBackward(diopiContextHandle_t ctx, diopiTensorHandle_t gradInput, diopiConstTensorHandle_t gradOutput, diopiConstTensorHandle_t input,
                                   diopiConstTensorHandle_t target, diopiConstTensorHandle_t weight, diopiReduction_t reduction, int64_t ignoreIndex) {
-    auto totalWeightSizeVec = std::vector<int64_t>({1});
+    auto totalWeightSizeVec = AscendTensor::ShapeType({1});
     auto totalWeightSize = vectorToDiopiSize(totalWeightSizeVec);
     diopiTensorHandle_t weightCopy, totalWeight, out, inputCopy, targetCopy, gradInputCopy;
     AscendTensor inputAt0(input);
@@ -183,8 +183,8 @@ diopiError_t diopiNLLLossBackward(diopiContextHandle_t ctx, diopiTensorHandle_t 
 
     nllLossOutWithTotalWeight(ctx, out, totalWeight, input, target, weightCopy, reduction, ignoreIndex);
 
-    std::vector<int64_t> calShapeVec;
-    std::vector<int64_t> calTargetShapeVec;
+    AscendTensor::ShapeType calShapeVec;
+    AscendTensor::ShapeType calTargetShapeVec;
 
     diopiDtype_t dtype, gradDtype;
     diopiGetTensorDtype(input, &dtype);
@@ -192,8 +192,8 @@ diopiError_t diopiNLLLossBackward(diopiContextHandle_t ctx, diopiTensorHandle_t 
 
     if (inputShape.len > 2) {
         int64_t calShape0 = inputShape.data[0];
-        std::vector<int64_t> inputCopyShapeVec;
-        std::vector<int64_t> permuteDimVec;
+        AscendTensor::ShapeType inputCopyShapeVec;
+        AscendTensor::ShapeType permuteDimVec;
         inputCopyShapeVec.push_back(inputShape.data[0]);
         permuteDimVec.push_back(0);
         for (int i = 1; i < inputShape.len - 1; i++) {
@@ -261,7 +261,7 @@ diopiError_t diopiNLLLossBackward(diopiContextHandle_t ctx, diopiTensorHandle_t 
     runner.run();
 
     if (inputShape.len > 2) {
-        std::vector<int64_t> permuteDimVec;
+        AscendTensor::ShapeType permuteDimVec;
         permuteDimVec.push_back(0);
         permuteDimVec.push_back(inputShape.len - 1);
         for (int i = 1; i < inputShape.len - 1; i++) {

@@ -46,7 +46,7 @@ diopiError_t diopiSum(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiCo
     if (dim.len > 0) {
         runner.addConstInput(dim);
     } else {
-        std::vector<int64_t> dimAllVector(inS.len);
+        AscendTensor::ShapeType dimAllVector(inS.len);
         std::iota(std::begin(dimAllVector), std::end(dimAllVector), 0);
         diopiSize_t dimAll = vectorToDiopiSize(dimAllVector);
         runner.addConstInput(dimAll);
@@ -98,7 +98,7 @@ diopiError_t diopiMean(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiC
     if (dim.len > 0) {
         runner.addConstInput(dim);
     } else {
-        std::vector<int64_t> dimAllVector(inS.len);
+        AscendTensor::ShapeType dimAllVector(inS.len);
         std::iota(std::begin(dimAllVector), std::end(dimAllVector), 0);
         diopiSize_t dimAll = vectorToDiopiSize(dimAllVector);
         runner.addConstInput(dimAll);
@@ -113,9 +113,9 @@ diopiError_t diopiMean(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiC
     return diopiSuccess;
 }
 
-inline std::vector<int64_t> getDimVectorForTensor(diopiConstTensorHandle_t th) {
+inline AscendTensor::ShapeType getDimVectorForTensor(diopiConstTensorHandle_t th) {
     AscendTensor at(th);
-    std::vector<int64_t> dimVector(at.dim());
+    AscendTensor::ShapeType dimVector(at.dim());
     for (int64_t i = 0; i < dimVector.size(); ++i) {
         dimVector[i] = i;
     }
@@ -129,7 +129,7 @@ diopiError_t diopiAll(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiCo
         AclOpRunner<1, 1>("Fills", ctx).addInput(out).setAttr<float>("value", 1).addOutput(out).run();
         return diopiSuccess;
     }
-    std::vector<int64_t> dimVector = nullptr == dim ? getDimVectorForTensor(input) : std::vector<int64_t>{*dim};
+    auto dimVector = nullptr == dim ? getDimVectorForTensor(input) : AscendTensor::ShapeType{*dim};
     AclOpRunner<2, 1>("ReduceAll", ctx).addInput(input).addConstInput(dimVector).setAttr("keep_dims", false).addOutput(out).run();
     return diopiSuccess;
 }
@@ -141,7 +141,7 @@ diopiError_t diopiAny(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiCo
         AclOpRunner<1, 1>("Fills", ctx).addInput(out).setAttr<float>("value", 0).addOutput(out).run();
         return diopiSuccess;
     }
-    std::vector<int64_t> dimVector = nullptr == dim ? getDimVectorForTensor(input) : std::vector<int64_t>{*dim};
+    auto dimVector = nullptr == dim ? getDimVectorForTensor(input) : AscendTensor::ShapeType{*dim};
     AclOpRunner<2, 1>("ReduceAny", ctx).addInput(input).addConstInput(dimVector).setAttr("keep_dims", false).addOutput(out).run();
     return diopiSuccess;
 }
@@ -163,7 +163,7 @@ diopiError_t diopiProd(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiC
         keepdim = false;
     }
 
-    std::vector<int64_t> dimVector = nullptr == dim ? std::vector<int64_t>{0} : std::vector<int64_t>{*dim};
+    auto dimVector = nullptr == dim ? AscendTensor::ShapeType{0} : AscendTensor::ShapeType{*dim};
 
     diopiDtype_t inputDtype, outDtype, highDtype;
     diopiGetTensorDtype(input, &inputDtype);

@@ -22,7 +22,7 @@ diopiError_t diopiUpsampleNearest(diopiContextHandle_t ctx, diopiTensorHandle_t 
 diopiError_t diopiUpsampleNearestBackward(diopiContextHandle_t ctx, diopiTensorHandle_t gradInput, diopiConstTensorHandle_t gradOutput, diopiSize_t outSize,
                                           diopiSize_t inSize) {
     auto gradOutputCopy = contiguous(ctx, gradOutput);
-    std::vector<int64_t> outputSizeVec({inSize.data[2], inSize.data[3]});
+    AscendTensor::ShapeType outputSizeVec({inSize.data[2], inSize.data[3]});
     diopiSize_t outputSize = vectorToDiopiSize(outputSizeVec);
     AclOpRunner<2, 1>("ResizeNearestNeighborV2Grad", ctx)
         .addInput(gradOutputCopy)

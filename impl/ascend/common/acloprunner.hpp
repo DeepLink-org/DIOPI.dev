@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <map>
@@ -66,8 +67,8 @@ diopiError_t makeOnesLike(diopiContextHandle_t ctx, diopiTensorHandle_t* out, di
 
 diopiTensorHandle_t hostToDevice(diopiContextHandle_t ctx, diopiConstTensorHandle_t src);
 
-inline std::vector<int64_t> calcStrides(int ndims, diopiSize_t size, diopiMemoryFormat_t format = diopiMemoryFormat_t::Contiguous) {
-    std::vector<int64_t> strides;
+inline AscendTensor::ShapeType calcStrides(int ndims, diopiSize_t size, diopiMemoryFormat_t format = diopiMemoryFormat_t::Contiguous) {
+    AscendTensor::ShapeType strides;
     strides.resize(ndims);
     int64_t st = 1;
     if (format == diopiMemoryFormat_t::Contiguous) {
@@ -168,11 +169,11 @@ diopiTensorHandle_t contiguous(diopiContextHandle_t ctx, diopiConstTensorHandle_
 
 int64_t getBaseBufferSize(diopiConstTensorHandle_t src);
 
-std::vector<int64_t> getBaseShape(diopiConstTensorHandle_t src);
+AscendTensor::ShapeType getBaseShape(diopiConstTensorHandle_t src);
 
-diopiSize_t vectorToDiopiSize(std::vector<int64_t>& sizeVec);
+diopiSize_t vectorToDiopiSize(AscendTensor::ShapeRefType sizeVec);
 
-diopiSize_t arrayToDiopiSize(int64_t* data, int64_t len);
+diopiSize_t arrayToDiopiSize(const int64_t* data, int64_t len);
 
 template <int InputSize, int OutputSize, aclDataType (*dtypeCastStrategy)(diopiDtype_t) = getAclDataType>
 class AclOpRunner {
@@ -182,7 +183,7 @@ class AclOpRunner {
     std::vector<aclDataBuffer*> inputBuffers_;
     std::vector<aclTensorDesc*> outputDescs_;
     std::vector<aclDataBuffer*> outputBuffers_;
-    std::vector<int64_t> syncIdxs_;
+    AscendTensor::ShapeType syncIdxs_;
     std::vector<diopiTensorHandle_t*> syncTensors_;
     std::vector<std::pair<diopiTensorHandle_t, diopiTensorHandle_t>> nonContiguousOutputPairs_;
     diopiContextHandle_t context_;
@@ -239,7 +240,7 @@ public:
 
     AclOpRunner& addConstInput(const AscendTensor& at, const aclFormat& format, bool isScalar = false, aclDataType aclDtype = ACL_DT_UNDEFINED) {
         ASCEND_CHECK_ABORT(at.defined(), "input should not be nullptr");
-        std::vector<int64_t> dims = at.shape();
+        auto dims = at.shape();
         if (dims.empty() && at.numel() == 1) {
             dims.push_back(1);
         }
@@ -274,7 +275,7 @@ public:
         return *this;
     }
 
-    AclOpRunner& addConstInput(const void* ptr, int64_t buffersize, std::vector<int64_t>& dims, const aclFormat& format, diopiDtype_t dtype,
+    AclOpRunner& addConstInput(const void* ptr, int64_t buffersize, AscendTensor::ShapeRefType dims, const aclFormat& format, diopiDtype_t dtype,
                                bool isScalar = false) {
         static int aclDebugFlag = std::getenv("DIOPI_DEBUG_ACLOPRUNNER") == nullptr ? 0 : 1;
         if (aclDebugFlag > 0) {
@@ -329,7 +330,7 @@ public:
         return addConstInput(sizeTensor, ACL_FORMAT_ND, false);
     }
 
-    AclOpRunner& addConstInput(const std::vector<int64_t>& size) { return addConstInput({size.data(), static_cast<int64_t>(size.size())}); }
+    AclOpRunner& addConstInput(AscendTensor::ShapeRefType size) { return addConstInput(diopiSize_t{size.data(), static_cast<int64_t>(size.size())}); }
 
     AclOpRunner& addConstInput(const diopiScalar_t& scalar, diopiDtype_t dtype) {
         diopiTensorHandle_t scalarTensor;
@@ -345,7 +346,7 @@ public:
         return addConstInput(scalar, dtype);
     }
 
-    AclOpRunner& addInput(const void* ptr, int64_t buffersize, const std::vector<int64_t>& dims, const aclFormat& format, diopiDtype_t dtype) {
+    AclOpRunner& addInput(const void* ptr, int64_t buffersize, AscendTensor::ShapeRefType dims, const aclFormat& format, diopiDtype_t dtype) {
         static int aclDebugFlag = std::getenv("DIOPI_DEBUG_ACLOPRUNNER") == nullptr ? 0 : 1;
         if (aclDebugFlag > 0) {
             std::stringstream stream;
@@ -384,7 +385,7 @@ public:
         auto& desc = inputDescs_[inputIndex_];
         auto& buffer = inputBuffers_[inputIndex_];
 
-        std::vector<int64_t> dims = at.getAclMemShape();
+        const auto& dims = at.getAclMemShape();
         desc = aclCreateTensorDesc(dtypeCastStrategy(at.dtype()), dims.size(), dims.data(), format);
         ASCEND_CHECK_ABORT(desc != nullptr, "aclTensorDesc should not be nullptr.");
         buffer = aclCreateDataBuffer(const_cast<void*>(at.data()), at.getAclMemBufferSize());
@@ -392,8 +393,8 @@ public:
         return *this;
     }
 
-    AclOpRunner& addInput(const std::vector<int64_t>& vec) {
-        std::vector<int64_t> dims(1, vec.size());
+    AclOpRunner& addInput(AscendTensor::ShapeRefType vec) {
+        AscendTensor::ShapeType dims(1, vec.size());
         aclTensorDesc* desc = aclCreateTensorDesc(ACL_INT64, 1, dims.data(), ACL_FORMAT_ND);
         aclDataBuffer* buffer = aclCreateDataBuffer(const_cast<void*>(reinterpret_cast<const void*>(vec.data())), sizeof(int64_t) * vec.size());
         inputDescs_[inputIndex_] = desc;
@@ -474,7 +475,7 @@ public:
         return *this;
     }
 
-    AclOpRunner& addOutput(void* ptr, int64_t buffersize, const std::vector<int64_t>& dims, const aclFormat& format, diopiDtype_t dtype) {
+    AclOpRunner& addOutput(void* ptr, int64_t buffersize, AscendTensor::ShapeRefType dims, const aclFormat& format, diopiDtype_t dtype) {
         static int aclDebugFlag = std::getenv("DIOPI_DEBUG_ACLOPRUNNER") == nullptr ? 0 : 1;
         if (aclDebugFlag > 0) {
             std::stringstream stream;
@@ -511,7 +512,7 @@ public:
         auto& desc = outputDescs_[outputIndex_];
         auto& buffer = outputBuffers_[outputIndex_];
 
-        std::vector<int64_t> dims = at.getAclMemShape();
+        const auto& dims = at.getAclMemShape();
         desc = aclCreateTensorDesc(dtypeCastStrategy(at.dtype()), dims.size(), dims.data(), format);
         ASCEND_CHECK_ABORT(desc != nullptr, "aclTensorDesc should not be nullptr.");
         // change const void* to void*
@@ -550,61 +551,54 @@ public:
 
     AclOpRunner& addOutputWithoutContiguous(diopiTensorHandle_t th) { return addOutput(th, getAclDataFormat(th)); }
 
-    template <typename T, std::enable_if_t<std::is_same<T, int64_t>::value || std::is_same<T, int>::value, void*> = nullptr>
-    AclOpRunner& setAttr(const std::string& attrName, const T& value) {
-        CALL_ACLRT(aclopSetAttrInt(attr_, attrName.data(), value));
-        return *this;
-    }
-
-    // float, double, long double
-    template <typename T, std::enable_if_t<std::is_floating_point<T>::value, void*> = nullptr>
-    AclOpRunner& setAttr(const std::string& attrName, const T& value) {
-        CALL_ACLRT(aclopSetAttrFloat(attr_, attrName.data(), value));
-        return *this;
-    }
-
-    template <typename T, std::enable_if_t<std::is_same<T, uint8_t>::value || std::is_same<T, bool>::value, void*> = nullptr>
-    AclOpRunner& setAttr(const std::string& attrName, const T& value) {
-        CALL_ACLRT(aclopSetAttrBool(attr_, attrName.data(), value));
-        return *this;
-    }
-
-    template <typename T, std::enable_if_t<std::is_same<T, std::string>::value, void*> = nullptr>
-    AclOpRunner& setAttr(const std::string& attrName, const T& value) {
-        CALL_ACLRT(aclopSetAttrString(attr_, attrName.data(), value.data()));
-        return *this;
-    }
-
-    template <typename T, std::enable_if_t<std::is_same<T, aclDataType>::value, void*> = nullptr>
-    AclOpRunner& setAttr(const std::string& attrName, const T& value) {
-        CALL_ACLRT(aclopSetAttrDataType(attr_, attrName.data(), value));
-        return *this;
-    }
-
-    template <typename T>
-    AclOpRunner& setAttr(const std::string& attrName, ...) {
-        ASCEND_CHECK_ABORT(false, "%s: no specialization for %s type.", dumpRunnerInfo().c_str(), typeid(T).name());
-        return *this;
-    }
-
-    template <typename T>
-    AclOpRunner& setAttr(const std::string& attrName, const typename std::vector<T>& value) {
-        if (isDebugAclOpRunnerOn()) {
-            std::stringstream stream;
-            stream << "attrName=" << attrName;
-            stream << ",dtype=" << typeid(T).name();
-            stream << ", Attr:(";
-            std::for_each(value.data(), value.data() + value.size(), [&stream](int64_t v) { stream << v << " "; });
-            stream << ")";
-            info(__FILE__, __LINE__, __FUNCTION__, "%s attr: %s", opname_.c_str(), stream.str().c_str());
+    template <typename U, typename T = std::remove_cv_t<std::remove_reference_t<U>>>
+    AclOpRunner& setAttr(const std::string& attrName, const U& value) {
+        if constexpr (std::is_same_v<T, int64_t> || std::is_same_v<T, int>) {
+            CALL_ACLRT(aclopSetAttrInt(attr_, attrName.data(), value));
+        } else if constexpr (std::is_floating_point_v<T>) {
+            CALL_ACLRT(aclopSetAttrFloat(attr_, attrName.data(), value));
+        } else if constexpr (std::is_same_v<T, uint8_t> || std::is_same_v<T, bool>) {
+            CALL_ACLRT(aclopSetAttrBool(attr_, attrName.data(), value));
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            CALL_ACLRT(aclopSetAttrString(attr_, attrName.data(), value.data()));
+        } else if constexpr (std::is_same_v<T, aclDataType>) {
+            CALL_ACLRT(aclopSetAttrDataType(attr_, attrName.data(), value));
+        } else if constexpr (std::is_same_v<T, diopiSize_t>) {
+            CALL_ACLRT(aclopSetAttrListInt(attr_, attrName.data(), value.len, value.data));
+        } else if constexpr (std::is_constructible_v<AscendTensor::ShapeRefType, T>) {
+            AscendTensor::ShapeRefType valueRef(value);
+            if (isDebugAclOpRunnerOn()) {
+                std::stringstream stream;
+                stream << "attrName=" << attrName;
+                stream << ", Attr:(";
+                std::for_each(valueRef.data(), valueRef.data() + valueRef.size(), [&stream](int64_t v) { stream << v << " "; });
+                stream << ")";
+                info(__FILE__, __LINE__, __FUNCTION__, "%s attr: %s", opname_.c_str(), stream.str().c_str());
+            }
+            CALL_ACLRT(aclopSetAttrListInt(attr_, attrName.data(), valueRef.size(), valueRef.data()));
+        } else {
+            ASCEND_CHECK_ABORT(false, "%s: no specialization for %s type.", dumpRunnerInfo().c_str(), typeid(T).name());
         }
-        std::vector<int64_t> vec(value.begin(), value.end());
-        CALL_ACLRT(aclopSetAttrListInt(attr_, attrName.data(), vec.size(), vec.data()));
         return *this;
     }
 
-    AclOpRunner& setAttr(const std::string& attrName, diopiSize_t value) {
-        CALL_ACLRT(aclopSetAttrListInt(attr_, attrName.data(), value.len, value.data));
+    template <typename T>
+    AclOpRunner& setAttr(const std::string& attrName, const std::vector<T>& value) {
+        if constexpr (std::is_same_v<T, int64_t>) {
+            CALL_ACLRT(aclopSetAttrListInt(attr_, attrName.data(), value.size(), value.data()));
+        } else {
+            if (isDebugAclOpRunnerOn()) {
+                std::stringstream stream;
+                stream << "attrName=" << attrName;
+                stream << ",dtype=" << typeid(T).name();
+                stream << ", Attr:(";
+                std::for_each(value.data(), value.data() + value.size(), [&stream](int64_t v) { stream << v << " "; });
+                stream << ")";
+                info(__FILE__, __LINE__, __FUNCTION__, "%s attr: %s", opname_.c_str(), stream.str().c_str());
+            }
+            std::vector<int64_t> vec(value.begin(), value.end());
+            CALL_ACLRT(aclopSetAttrListInt(attr_, attrName.data(), vec.size(), vec.data()));
+        }
         return *this;
     }
 
@@ -665,7 +659,7 @@ public:
             auto syncIdx = syncIdxs_[i];
             auto syncTensorPtr = syncTensors_[i];
             int descNumDims = aclGetTensorDescNumDims(outputDescs_[syncIdx]);
-            std::vector<int64_t> realShape;
+            AscendTensor::ShapeType realShape;
             int64_t dimSize = 0;
             for (int64_t j = 0; j < descNumDims; j++) {
                 CALL_ACLRT(aclGetTensorDescDimV2(outputDescs_[syncIdx], j, &dimSize));

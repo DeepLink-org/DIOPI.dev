@@ -9,13 +9,13 @@
 namespace impl {
 namespace ascend {
 
-std::vector<int64_t> nonzeroNpuMaxOutputSize(diopiConstTensorHandle_t input) {
+AscendTensor::ShapeType nonzeroNpuMaxOutputSize(diopiConstTensorHandle_t input) {
     int64_t inputNumEl;
     diopiGetTensorNumel(input, &inputNumEl);
     diopiSize_t inputSize;
     diopiGetTensorShape(input, &inputSize);
     int64_t inputDim = inputSize.len;
-    std::vector<int64_t> maxOutputSize({inputNumEl, inputDim});
+    AscendTensor::ShapeType maxOutputSize({inputNumEl, inputDim});
     return maxOutputSize;
 }
 

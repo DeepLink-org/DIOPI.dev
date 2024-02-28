@@ -2,6 +2,8 @@
 #define IMPL_ASCEND_ASCEND_TENSOR_HPP_
 
 #include <acl/acl.h>
+#include <c10/util/ArrayRef.h>
+#include <c10/util/SmallVector.h>
 #include <diopi/diopirt.h>
 
 #include <cstdarg>
@@ -118,6 +120,9 @@ constexpr aclDataType diopiDtypeToAclDataType(diopiDtype_t dtype) noexcept {
 
 class AscendTensor final {
 public:
+    using ShapeType = c10::SmallVector<int64_t, 5>;  // TODO(lljbash): shall we add c10 as a dependency?
+    using ShapeRefType = c10::IntArrayRef;
+
     explicit AscendTensor(const diopiConstTensorHandle_t& tensor) : tensor_(tensor) {
         if (tensor_ != nullptr) {
             diopiSize_t diopiShape;
@@ -164,18 +169,12 @@ public:
         return dtype_;
     }
 
-    template <typename T>
-    std::vector<T> shape() const {
-        ASCEND_CHECK_NULLPTR_ABORT(tensor_);
-        return std::vector<T>(shape_.begin(), shape_.end());
-    }
-
-    const std::vector<int64_t>& shape() const {
+    const ShapeType& shape() const {
         ASCEND_CHECK_NULLPTR_ABORT(tensor_);
         return shape_;
     }
 
-    const std::vector<int64_t>& stride() const {
+    const ShapeType& stride() const {
         ASCEND_CHECK_NULLPTR_ABORT(tensor_);
         return stride_;
     }
@@ -225,21 +224,41 @@ public:
     bool isSame(const AscendTensor& t) const { return this->tensorHandle() == t.tensorHandle(); }
 
     int64_t getAclMemBufferSize() const;
-    std::vector<int64_t> getAclMemShape() const;
+    AscendTensor::ShapeType getAclMemShape() const;
     aclFormat getAclDataFormat() const { return inferAclDataFormat(dim(), shape_.data(), stride_.data(), tensor_); }
     aclDataType getAclDataType() const { return diopiDtypeToAclDataType(dtype_); }
 
     // Those methods may change the class attribute.
-    AscendTensor& asStrided(const std::vector<int64_t>& shape, const std::vector<int64_t>& stride);
-    AscendTensor& unsqueeze(int dim);
-    AscendTensor& view(const std::vector<int64_t>& shape);
+    AscendTensor& asStrided(ShapeRefType shape, ShapeRefType stride) {
+        this->shape_ = shape;
+        this->stride_ = stride;
+        return *this;
+    }
+    AscendTensor& unsqueeze(int dim) {
+        // NOTE: Unsqueezing a channel-last tensor will make it uncontiguous. This behavior is aligned with PyTorch.
+        int64_t newStride = dim >= this->dim() ? 1 : shape_[dim] * stride_[dim];
+        shape_.insert(shape_.begin() + dim, 1);
+        stride_.insert(stride_.begin() + dim, newStride);
+        return *this;
+    }
+    AscendTensor& view(ShapeRefType shape) {
+        // must be contiguous
+        ASCEND_CHECK_ABORT(this->isContiguous(), "now only contiguous tensor support view by shape.");
+        stride_.resize(shape.size());
+        shape_ = shape;
+        stride_[shape.size() - 1] = 1;
+        for (int j = shape_.size() - 2; j >= 0; j--) {
+            stride_[j] = stride_[j + 1] * shape_[j + 1];
+        }
+        return *this;
+    }
 
 private:
     // diopi origin tensor
     diopiConstTensorHandle_t tensor_ = nullptr;
     diopiDtype_t dtype_{diopi_dtype_unsupported};
-    std::vector<int64_t> shape_{};
-    std::vector<int64_t> stride_{};
+    ShapeType shape_;
+    ShapeType stride_;
     diopiDevice_t device_ = diopiDevice_t::diopi_device;
     int64_t numel_{0};
     int64_t elemsize_{0};

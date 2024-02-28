@@ -4,17 +4,20 @@
  * @copyright  (c) 2023, DeepLink.
  */
 
+#include <cstdint>
+#include <vector>
+
 #include "../common/acloprunner.hpp"
 
 namespace impl {
 namespace ascend {
 diopiError_t diopiSlice(diopiContextHandle_t ctx, diopiTensorHandle_t nullOut, diopiConstTensorHandle_t input, int64_t dim, int64_t start, int64_t end,
                         int64_t step) {
-    std::vector<int64_t> index;
+    std::vector<std::int64_t> index;
     for (int64_t i = start; i < end; i += step) {
         index.push_back(i);
     }
-    std::vector<int64_t> dimVec{dim};
+    auto dimVec = {dim};
     bool negativeIndexSupport = true;
     AclOpRunner<3, 1>("GatherV2", ctx)
         .addInput(input)
@@ -31,9 +34,9 @@ diopiError_t diopiSliceBackward(diopiContextHandle_t ctx, diopiTensorHandle_t gr
     if (dim < 0) {
         dim += inputSizes.len;
     }
-    std::vector<int64_t> start64(inputSizes.len, 0);
-    std::vector<int64_t> step64(inputSizes.len, 1);
-    std::vector<int64_t> end64(inputSizes.data, inputSizes.data + inputSizes.len);
+    AscendTensor::ShapeType start64(inputSizes.len, 0);
+    AscendTensor::ShapeType step64(inputSizes.len, 1);
+    AscendTensor::ShapeType end64(inputSizes.data, inputSizes.data + inputSizes.len);
     start64[dim] = start;
     step64[dim] = step;
     end64[dim] = end;

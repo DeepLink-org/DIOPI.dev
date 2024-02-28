@@ -15,8 +15,8 @@ diopiError_t diopiConvolution2d(diopiContextHandle_t ctx, diopiTensorHandle_t ou
                                 diopiConstTensorHandle_t bias, diopiSize_t stride, diopiSize_t padding, diopiSize_t dilation, int64_t groups) {
     auto format = getAclDataFormat(input);
     const std::string dataFormat = (format == ACL_FORMAT_NHWC) ? "NHWC" : "NCHW";
-    std::vector<int64_t> strideTemp(4, 1);
-    std::vector<int64_t> dilationsTemp(4, 1);
+    AscendTensor::ShapeType strideTemp(4, 1);
+    AscendTensor::ShapeType dilationsTemp(4, 1);
     if (format == ACL_FORMAT_NHWC) {
         strideTemp[1] = stride.data[0];
         strideTemp[2] = stride.data[1];
@@ -28,14 +28,14 @@ diopiError_t diopiConvolution2d(diopiContextHandle_t ctx, diopiTensorHandle_t ou
         dilationsTemp[2] = dilation.data[0];
         dilationsTemp[3] = dilation.data[1];
     }
-    const std::vector<int64_t> paddingTemp = {padding.data[0], padding.data[0], padding.data[1], padding.data[1]};
+    auto paddingTemp = {padding.data[0], padding.data[0], padding.data[1], padding.data[1]};
     AclOpRunner<3, 1> runner("Conv2D", ctx);
     runner.addInput(input)
         .addInput(weight)
         .setAttr("strides", strideTemp)
         .setAttr("pads", paddingTemp)
         .setAttr("dilations", dilationsTemp)
-        .setAttr<int64_t>("groups", groups)
+        .setAttr("groups", groups)
         .setAttr("data_format", dataFormat)
         .addOutput(out);
     if (bias) {
@@ -71,8 +71,8 @@ diopiError_t diopiConvolution2dBackward(diopiContextHandle_t ctx, diopiTensorHan
         gradOutputCopy = const_cast<diopiTensorHandle_t>(gradOutput);
     }
 
-    std::vector<int64_t> strideTemp(4, 1);
-    std::vector<int64_t> dilationsTemp(4, 1);
+    AscendTensor::ShapeType strideTemp(4, 1);
+    AscendTensor::ShapeType dilationsTemp(4, 1);
     if (format == ACL_FORMAT_NHWC) {
         strideTemp[1] = stride.data[0];
         strideTemp[2] = stride.data[1];
@@ -84,7 +84,7 @@ diopiError_t diopiConvolution2dBackward(diopiContextHandle_t ctx, diopiTensorHan
         dilationsTemp[2] = dilation.data[0];
         dilationsTemp[3] = dilation.data[1];
     }
-    const std::vector<int64_t> paddingTemp = {padding.data[0], padding.data[0], padding.data[1], padding.data[1]};
+    auto paddingTemp = {padding.data[0], padding.data[0], padding.data[1], padding.data[1]};
 
     diopiSize_t weightShape;
     diopiGetTensorShape(gradWeight, &weightShape);
@@ -98,7 +98,7 @@ diopiError_t diopiConvolution2dBackward(diopiContextHandle_t ctx, diopiTensorHan
             .setAttr("strides", strideTemp)
             .setAttr("pads", paddingTemp)
             .setAttr("dilations", dilationsTemp)
-            .setAttr<int64_t>("groups", groups)
+            .setAttr("groups", groups)
             .setAttr("data_format", dataFormat)
             .run();
     } else {

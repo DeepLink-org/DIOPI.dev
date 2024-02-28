@@ -17,7 +17,7 @@ void updateInputAscendTensorDim(AscendTensor& inputAt, bool training) {
     } else if (3 == dim) {
         inputAt.unsqueeze(3);
     } else if (5 == dim && !training) {
-        std::vector<int64_t> shape4d{inputAt.shape(0), inputAt.shape(1), inputAt.shape(2), inputAt.shape(3) * inputAt.shape(4)};
+        auto shape4d = {inputAt.shape(0), inputAt.shape(1), inputAt.shape(2), inputAt.shape(3) * inputAt.shape(4)};
         inputAt.view(shape4d);
     }
 }
@@ -60,7 +60,7 @@ diopiError_t diopiBatchNorm(diopiContextHandle_t ctx, diopiTensorHandle_t out, d
     updateInputAscendTensorDim(inputAt, training);
     outputAt.view(inputAt.getAclMemShape());
 
-    std::vector<int64_t> batchShapeV{inputAt.shape(1)};
+    AscendTensor::ShapeType batchShapeV{inputAt.shape(1)};
     diopiSize_t batchShapeSizeT{batchShapeV.data(), static_cast<int64_t>(batchShapeV.size())};
     diopiTensorHandle_t weightTemp = createTensorIfNullptrOrConstCast(ctx, weight, batchShapeSizeT, inputAt.dtype(), true, 1);
     diopiTensorHandle_t biasTemp = createTensorIfNullptrOrConstCast(ctx, bias, batchShapeSizeT, inputAt.dtype(), true, 0);

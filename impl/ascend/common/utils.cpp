@@ -74,8 +74,8 @@ diopiError_t makeTensor(diopiContextHandle_t ctx, AscendTensor& dst, const diopi
     return makeTensor(ctx, dst, size, nullptr, dtype, device);
 }
 
-diopiError_t makeTensor(diopiContextHandle_t ctx, AscendTensor& dst, const std::vector<int64_t>& shape, const std::vector<int64_t>& stride, diopiDtype_t dtype,
-                        diopiDevice_t device) {
+diopiError_t makeTensor(diopiContextHandle_t ctx, AscendTensor& dst, AscendTensor::ShapeRefType shape, AscendTensor::ShapeRefType stride,
+                        diopiDtype_t dtype, diopiDevice_t device) {
     diopiSize_t shapeTmp{shape.data(), static_cast<int64_t>(shape.size())};
     if (stride.empty()) {
         return makeTensor(ctx, dst, &shapeTmp, nullptr, dtype, device);
@@ -94,12 +94,12 @@ diopiError_t makeTensorLike(diopiContextHandle_t ctx, AscendTensor& dst, const A
     }
 }
 
-diopiError_t makeTensor(diopiContextHandle_t ctx, AscendTensor& dst, const std::vector<int64_t>& shape, diopiDtype_t dtype) {
-    return makeTensor(ctx, dst, shape, std::vector<int64_t>{}, dtype, diopi_device);
+diopiError_t makeTensor(diopiContextHandle_t ctx, AscendTensor& dst, AscendTensor::ShapeRefType shape, diopiDtype_t dtype) {
+    return makeTensor(ctx, dst, shape, {}, dtype, diopi_device);
 }
 
 diopiError_t makeTensorFromScalar(diopiContextHandle_t ctx, AscendTensor& dst, const diopiScalar_t* scalar, diopiDevice_t device) {
-    std::vector<int64_t> shape{1};
+    AscendTensor::ShapeType shape{1};
     makeTensor(ctx, dst, shape, scalar->stype);
     auto th = const_cast<diopiTensorHandle_t>(static_cast<diopiConstTensorHandle_t>(dst));
     if (diopi_device == device) {
@@ -131,7 +131,7 @@ diopiError_t fillNan(diopiContextHandle_t ctx, AscendTensor& src) {
     return diopiSuccess;
 }
 
-diopiError_t reshape(diopiContextHandle_t ctx, const AscendTensor& src, AscendTensor& dst, const std::vector<int64_t>& shape) {
+diopiError_t reshape(diopiContextHandle_t ctx, const AscendTensor& src, AscendTensor& dst, AscendTensor::ShapeRefType shape) {
     ASCEND_CHECK_ABORT(src.isContiguous(), "now only contiguous tensor support reshape by shape.");
     if (src.isSame(dst)) {
         dst.view(shape);
@@ -503,8 +503,8 @@ bool isContiguous(diopiConstTensorHandle_t tensor, diopiMemoryFormat_t format) {
     return true;
 }
 
-std::vector<int64_t> getBaseShape(diopiConstTensorHandle_t src) {
-    std::vector<int64_t> baseShapeVec;
+AscendTensor::ShapeType getBaseShape(diopiConstTensorHandle_t src) {
+    AscendTensor::ShapeType baseShapeVec;
     diopiSize_t shape;
     diopiGetTensorShape(src, &shape);
     if (isContiguous(src)) {
@@ -610,14 +610,14 @@ diopiTensorHandle_t contiguous(diopiContextHandle_t ctx, diopiConstTensorHandle_
     return out;
 }
 
-diopiSize_t vectorToDiopiSize(std::vector<int64_t>& sizeVec) {
+diopiSize_t vectorToDiopiSize(AscendTensor::ShapeRefType sizeVec) {
     diopiSize_t size;
     size.len = sizeVec.size();
     size.data = sizeVec.data();
     return size;
 }
 
-diopiSize_t arrayToDiopiSize(int64_t* data, int64_t len) {
+diopiSize_t arrayToDiopiSize(const int64_t* data, int64_t len) {
     diopiSize_t size;
     size.len = len;
     size.data = data;
@@ -626,21 +626,21 @@ diopiSize_t arrayToDiopiSize(int64_t* data, int64_t len) {
 
 diopiError_t transTensorTo2D(diopiContextHandle_t ctx, AscendTensor& th) {
     if (th.shape().size() < 2) return diopiErrorOccurred;
-    std::vector<int64_t> dims;
-    std::vector<int64_t> thShape = th.shape();
+    AscendTensor::ShapeType dims;
+    auto thShape = th.shape();
     int dim1 = std::accumulate(thShape.begin(), thShape.end() - 1, 1, std::multiplies<>());
     dims = {dim1, thShape.back()};
     th.view(dims);
     return diopiSuccess;
 }
 
-diopiError_t broadcast(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, const std::vector<int64_t>& size) {
+diopiError_t broadcast(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, AscendTensor::ShapeRefType size) {
     AscendTensor atout(out);
     const AscendTensor atinp(input);
     return broadcast(ctx, atout, atinp, size);
 }
 
-diopiError_t broadcast(diopiContextHandle_t ctx, AscendTensor& out, const AscendTensor& input, const std::vector<int64_t>& size) {
+diopiError_t broadcast(diopiContextHandle_t ctx, AscendTensor& out, const AscendTensor& input, AscendTensor::ShapeRefType size) {
     if (size.empty()) {
         diopiCastDtype(ctx, const_cast<diopiTensorHandle_t>(out.tensorHandle()), const_cast<diopiTensorHandle_t>(input.tensorHandle()));
         return diopiSuccess;
@@ -658,11 +658,11 @@ diopiError_t broadcast(diopiContextHandle_t ctx, AscendTensor& out, const Ascend
     return diopiSuccess;
 }
 
-std::vector<int64_t> inferSize(const std::vector<int64_t>& shape1, const std::vector<int64_t>& shape2) {
+AscendTensor::ShapeType inferSize(AscendTensor::ShapeRefType shape1, AscendTensor::ShapeRefType shape2) {
     size_t dimsA = shape1.size();
     size_t dimsB = shape2.size();
     size_t ndim = dimsA > dimsB ? dimsA : dimsB;
-    std::vector<int64_t> expandedSizes(ndim);
+    AscendTensor::ShapeType expandedSizes(ndim);
 
     // Use ptrdiff_t to ensure signed comparison.
     for (ptrdiff_t i = (ptrdiff_t)ndim - 1; i >= 0; --i) {

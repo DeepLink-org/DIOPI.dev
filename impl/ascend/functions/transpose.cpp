@@ -17,7 +17,7 @@ diopiError_t diopiTranspose(diopiContextHandle_t ctx, diopiTensorHandle_t out, d
     int64_t inputSize = inputShape.len;
     if (dim0 < 0) dim0 = dim0 + inputSize;
     if (dim1 < 0) dim1 = dim1 + inputSize;
-    std::vector<int64_t> perms(inputSize);
+    AscendTensor::ShapeType perms(inputSize);
     std::iota(perms.begin(), perms.end(), 0);
     perms[dim0] = dim1;
     perms[dim1] = dim0;

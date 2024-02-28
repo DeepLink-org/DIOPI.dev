@@ -15,7 +15,7 @@ diopiError_t diopiAddmm(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopi
     AscendTensor mat2Tr(mat2);
 
     // calculate (mat1 @ mat2)
-    std::vector<int64_t> tempShape(2);
+    AscendTensor::ShapeType tempShape(2);
     tempShape[0] = mat1Tr.shape(0);
     tempShape[1] = mat2Tr.shape(1);
     AscendTensor matResultTr;
@@ -24,7 +24,7 @@ diopiError_t diopiAddmm(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopi
     diopiMm(ctx, matResult, mat1, mat2);
 
     // calculate beta x input;
-    const std::vector<int64_t>& inputShape = inputTr.shape();
+    const auto& inputShape = inputTr.shape();
     AscendTensor bXinputTr;
     makeTensor(ctx, bXinputTr, inputShape, inputTr.dtype());
     diopiTensorHandle_t bXinput = const_cast<diopiTensorHandle_t>(bXinputTr.tensorHandle());

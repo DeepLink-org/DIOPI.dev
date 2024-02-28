@@ -20,9 +20,9 @@ diopiError_t diopiBaddbmm(diopiContextHandle_t ctx, diopiTensorHandle_t out, dio
     AscendTensor batch2At(batch2);
 
     // get the size of batch1 * batch2
-    std::vector<int64_t> batch1Shape = batch1At.shape();
-    std::vector<int64_t> batch2Shape = batch2At.shape();
-    std::vector<int64_t> vectorSizeBatchMatMulTensor = {batch1Shape[0], batch1Shape[1], batch2Shape[2]};
+    const auto& batch1Shape = batch1At.shape();
+    const auto& batch2Shape = batch2At.shape();
+    AscendTensor::ShapeType vectorSizeBatchMatMulTensor = {batch1Shape[0], batch1Shape[1], batch2Shape[2]};
 
     // init a tensor according to the size of batch1 * batch2 ;
     diopiSize_t diopiSizeBatchMatMulTensor = vectorToDiopiSize(vectorSizeBatchMatMulTensor);

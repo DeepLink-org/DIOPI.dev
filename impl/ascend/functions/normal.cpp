@@ -20,7 +20,7 @@ void stdNormal(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiGenerator
     makeTensorFromScalar(ctx, &offsetScalar, &offsetTh);
     diopiScalar_t alg = constructDiopiScalarT(diopi_dtype_int64, 1);
     AclOpRunner<4, 1>("StatelessRandomNormalV2", ctx)
-        .addConstInput(outputAt.dim() == 0 ? std::vector<int64_t>{1} : outputAt.shape())
+        .addConstInput(outputAt.dim() == 0 ? AscendTensor::ShapeType{1} : outputAt.shape())
         .addConstInput(seedTh, false, ACL_UINT64)
         .addConstInput(offsetTh, false, ACL_UINT64)
         .addConstInput(alg, diopi_dtype_int32)

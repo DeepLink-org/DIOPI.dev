@@ -22,8 +22,8 @@ bool AscendTensor::isContiguous(diopiMemoryFormat_t format) const {
     }
     int64_t stride = 1;
     int64_t dim = this->dim();
-    auto strides = this->stride();
-    auto shape = this->shape();
+    const auto& strides = stride_;
+    const auto& shape = shape_;
 
     if (format == diopiMemoryFormat_t::Contiguous) {
         for (int64_t i = dim - 1; i >= 0; i--) {
@@ -76,48 +76,14 @@ bool AscendTensor::isContiguous(diopiMemoryFormat_t format) const {
     return true;
 }
 
-AscendTensor& AscendTensor::asStrided(const std::vector<int64_t>& shape, const std::vector<int64_t>& stride) {
-    this->shape_ = shape;
-    this->stride_ = stride;
-    return *this;
-}
-
-AscendTensor& AscendTensor::unsqueeze(int dim) {
-    // Note: `channels_last` tensor uses this will become uncontiguous
-    // which is same with pytorch
-    auto shape = this->shape();
-    auto strides = this->stride();
-    int64_t newStride = dim >= this->dim() ? 1 : shape[dim] * strides[dim];
-    std::vector<int64_t> newShape(shape.begin(), shape.end());
-    std::vector<int64_t> newStrides(strides.begin(), strides.end());
-
-    newShape.insert(newShape.begin() + dim, 1);
-    newStrides.insert(newStrides.begin() + dim, newStride);
-    this->asStrided(newShape, newStrides);
-    return *this;
-}
-
-AscendTensor& AscendTensor::view(const std::vector<int64_t>& shape) {
-    // must be contiguous
-    ASCEND_CHECK_ABORT(this->isContiguous(), "now only contiguous tensor support view by shape.");
-    std::vector<int64_t> stride(shape.size());
-    this->shape_ = shape;
-    stride[shape.size() - 1] = 1;
-    for (int j = shape_.size() - 2; j >= 0; j--) {
-        stride[j] = stride[j + 1] * shape[j + 1];
-    }
-    this->stride_ = stride;
-    return *this;
-}
-
 const void* AscendTensor::data() const {
     const void* p = nullptr;
     diopiGetTensorDataConst(tensor_, &p);
     return p;
 }
 
-std::vector<int64_t> AscendTensor::getAclMemShape() const {
-    std::vector<int64_t> baseShapeVec;
+AscendTensor::ShapeType AscendTensor::getAclMemShape() const {
+    AscendTensor::ShapeType baseShapeVec;
     if (this->isContiguous()) {
         if (dim() > 0) {
             baseShapeVec.resize(dim());

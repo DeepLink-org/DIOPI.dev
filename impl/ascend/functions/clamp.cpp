@@ -62,7 +62,7 @@ diopiError_t diopiClamp(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopi
 
     AscendTensor inputAt(input);
     AscendTensor outAt(out);
-    const std::vector<int64_t>& sizes = inputAt.shape();
+    const auto& sizes = inputAt.shape();
     inputDtype = inputAt.dtype();
     outDtype = outAt.dtype();
 

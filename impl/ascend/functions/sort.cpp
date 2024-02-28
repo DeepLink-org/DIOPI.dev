@@ -25,7 +25,7 @@ diopiError_t diopiSort(diopiContextHandle_t ctx, diopiTensorHandle_t values, dio
 
     if (dim != lastdim) {
         AscendTensor inputA(input);
-        std::vector<int64_t> perms = inputA.shape();
+        auto perms = inputA.shape();
         std::swap(perms[dim], perms[lastdim]);
         const diopiSize_t tranShape = vectorToDiopiSize(perms);
 

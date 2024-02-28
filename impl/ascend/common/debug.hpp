@@ -21,7 +21,7 @@ namespace impl {
 namespace ascend {
 
 template <typename T>
-void printVectorWithShape(const std::vector<T>& data, const std::vector<int64_t>& shape, size_t depth, size_t& index) {
+void printVectorWithShape(const std::vector<T>& data, AscendTensor::ShapeRefType shape, size_t depth, size_t& index) {
     if (depth >= shape.size()) {
         return;
     }
@@ -83,8 +83,8 @@ inline std::string dumpTensor(const AscendTensor& at, const std::string& message
     std::stringstream stream;
     stream << "AscendTensor(handle:" << at.data() << " " << message;
     if (at.defined()) {
-        auto shape = at.shape();
-        auto stride = at.stride();
+        const auto& shape = at.shape();
+        const auto& stride = at.stride();
         stream << ", data:" << at.data();
         stream << ", dtype:" << at.dtype();
         stream << ", device:" << at.device();

@@ -11,7 +11,7 @@ namespace ascend {
 
 diopiError_t diopiEmbedding(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t weight, diopiConstTensorHandle_t indices,
                             int64_t paddingIdx, bool scaleGradByfreq, bool sparse) {
-    std::vector<int64_t> dimVec({0});
+    AscendTensor::ShapeType dimVec({0});
     diopiSize_t dim = vectorToDiopiSize(dimVec);
     AclOpRunner<3, 1>("GatherV2", ctx).addInput(weight).addInput(indices).addConstInput(dim).setAttr<int64_t>("batch_dims", 0).addOutput(out).run();
     return diopiSuccess;

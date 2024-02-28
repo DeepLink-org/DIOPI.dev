@@ -84,7 +84,7 @@ diopiError_t finalizeLibrary() {
 
 diopiError_t buildGeneratorState(diopiContextHandle_t ctx, diopiTensorHandle_t out) {
     // state size = seed size + offset size
-    std::vector<int64_t> vec{sizeof(uint64_t) + sizeof(int64_t)};
+    AscendTensor::ShapeType vec{sizeof(uint64_t) + sizeof(int64_t)};
     diopiSize_t size{vec.data(), static_cast<int64_t>(vec.size())};
     diopiTensorHandle_t tensor = nullptr;
     diopiRequireTensor(ctx, &tensor, &size, nullptr, diopi_dtype_uint8, diopi_host);
