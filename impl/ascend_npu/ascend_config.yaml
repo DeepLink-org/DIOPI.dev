@@ -156,6 +156,7 @@ ascend:
 - diopiScatterInp
 - diopiScatterScalar
 - diopiScatterInpScalar
+- diopiCastDtype
 ascend_npu:
 - diopiAbs
 - diopiAbsInp
@@ -167,7 +168,6 @@ ascend_npu:
 - diopiNonzero
 - diopiBmm
 - diopiMatmul
-- diopiCastDtype
 - diopiCat
 - diopiCeil
 - diopiCeilInp

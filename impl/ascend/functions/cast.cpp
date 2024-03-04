@@ -5,6 +5,7 @@
  */
 
 #include "../common/acloprunner.hpp"
+#include "../aclnn/adaptor.hpp"
 
 namespace impl {
 
@@ -66,7 +67,11 @@ diopiError_t diopiCastDtype(diopiContextHandle_t ctx, diopiTensorHandle_t out, d
 #endif
 
 diopiError_t diopiCastDtype(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input) {
-    return ascend_npu::diopiCastDtype(ctx, out, input);
+    // return ascend_npu::diopiCastDtype(ctx, out, input);
+    diopiDtype_t dtype;
+    diopiGetTensorDtype(out, &dtype);
+    DIOPI_ASCEND_CALL_ACLNN(aclnnCast, ctx, input, diopiDtypeToAclDataType(dtype), out);
+    return diopiSuccess;
 }
 
 }  // namespace ascend

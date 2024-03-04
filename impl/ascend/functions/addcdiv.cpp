@@ -4,6 +4,7 @@
  * @copyright  (c) 2023, DeepLink.
  */
 
+#include "../aclnn/adaptor.hpp"
 #include "../common/acloprunner.hpp"
 
 namespace impl {
@@ -11,6 +12,8 @@ namespace ascend {
 
 diopiError_t diopiAddcdiv(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, diopiConstTensorHandle_t tensor1,
                           diopiConstTensorHandle_t tensor2, const diopiScalar_t* value) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnAddcdiv, ctx, input, tensor1, tensor2, value, out);
+#if 0
     AscendTensor inAt(input), t1(tensor1), t2(tensor2);
     if (inAt.numel() == 0) {
         return diopiSuccess;
@@ -23,12 +26,17 @@ diopiError_t diopiAddcdiv(diopiContextHandle_t ctx, diopiTensorHandle_t out, dio
     diopiDtype_t dtype;
     diopiGetTensorDtype(input, &dtype);
     AclOpRunner<4, 1>("Addcdiv", ctx).addInput(inAt).addInput(t1).addInput(t2).addConstInput(*value, dtype).addOutput(out).run();
+#endif
     return diopiSuccess;
 }
 
 diopiError_t diopiAddcdivInp(diopiContextHandle_t ctx, diopiTensorHandle_t input, diopiConstTensorHandle_t tensor1, diopiConstTensorHandle_t tensor2,
                              const diopiScalar_t* value) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnInplaceAddcdiv, ctx, input, tensor1, tensor2, value);
+    return diopiSuccess;
+#if 0
     return diopiAddcdiv(ctx, input, input, tensor1, tensor2, value);
+#endif
 }
 
 }  // namespace ascend
