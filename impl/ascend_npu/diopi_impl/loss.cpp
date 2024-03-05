@@ -41,4 +41,27 @@ diopiError_t diopiMSELossBackward(diopiContextHandle_t ctx, diopiTensorHandle_t 
     END_CALL_ACL_OP();
 }
 
+diopiError_t diopiCrossEntropyLoss(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, diopiConstTensorHandle_t target,
+                                   diopiConstTensorHandle_t weight, diopiReduction_t reduction, int64_t ignoreIndex, double labelSmoothing) {
+    diopiTensorHandle_t logTensor;
+    makeTensorLike(ctx, &logTensor, input);
+    diopiLogSoftmax(ctx, logTensor, input, 1);
+    target = hostToDevice(ctx, target);
+    diopiNLLLoss(ctx, out, logTensor, target, weight, reduction, ignoreIndex);
+    return diopiSuccess;
+}
+
+diopiError_t diopiCrossEntropyLossBackward(diopiContextHandle_t ctx, diopiTensorHandle_t gradInput, diopiConstTensorHandle_t gradOutput,
+                                           diopiConstTensorHandle_t input, diopiConstTensorHandle_t target, diopiConstTensorHandle_t weight,
+                                           diopiReduction_t reduction, int64_t ignoreIndex, double labelSmoothing) {
+    diopiTensorHandle_t logTensor, gradLog;
+    makeTensorLike(ctx, &logTensor, input);
+    diopiLogSoftmax(ctx, logTensor, input, 1);
+    makeTensorLike(ctx, &gradLog, gradInput);
+    target = hostToDevice(ctx, target);
+    diopiNLLLossBackward(ctx, gradLog, gradOutput, input, target, weight, reduction, ignoreIndex);
+    diopiLogSoftmaxBackward(ctx, gradInput, gradLog, logTensor, 1);
+    return diopiSuccess;
+}
+
 }  // namespace OP_IMPL_NS

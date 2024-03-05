@@ -172,6 +172,8 @@ ascend_npu:
 - diopiCat
 - diopiCeil
 - diopiCeilInp
+- diopiCrossEntropyLoss
+- diopiCrossEntropyLossBackward
 - diopiExpand
 - diopiFlip
 - diopiFloor
