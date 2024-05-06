@@ -4,6 +4,7 @@
  * @copyright  (c) 2024, DeepLink.
  */
 
+#include <c10/util/ArrayRef.h>
 #include <c10/util/Optional.h>
 #include <torch/torch.h>
 
@@ -32,6 +33,9 @@ diopiError_t diopiTokenDecodeAttentionInferenceV1(diopiContextHandle_t ctx, diop
     c10::Layout layout = qAt.layout();
     at::Tensor bSeqLenCpu = b_seq_lenAt.cpu();
     at::Tensor bStartLocCpu = b_start_locAt.cpu();
+    c10::optional<at::Tensor> paddingMask = c10::nullopt;
+    c10::optional<at::Tensor> attnMask = c10::nullopt;
+    c10::IntArrayRef actSeqLen = {};
     for (int i = 0; i < batch; ++i) {
         int curSeqLen = bSeqLenCpu[i].item<int>();
         int curSeqStartLoc = bStartLocCpu[i].item<int>();
@@ -42,7 +46,7 @@ diopiError_t diopiTokenDecodeAttentionInferenceV1(diopiContextHandle_t ctx, diop
         auto outAtReshaped = at::slice(outAt, 0, i, i+1, 1).reshape({1, 1, hidden_size_q});
         at::TensorList keyList = key;
         at::TensorList valueList = value;
-        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnIncreFlashAttention, query, keyList, valueList, c10::nullopt, c10::nullopt, c10::nullopt,
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnIncreFlashAttention, query, keyList, valueList, paddingMask, attnMask, actSeqLen,
                                      head_num_q, scaleValue, "BSH", head_num_kv, outAtReshaped);
     }
     END_CALL_ACL_OP();
@@ -62,6 +66,8 @@ diopiError_t diopiTokenDecodeAttentionInferenceV2(diopiContextHandle_t ctx, diop
     int64_t max_seq_len_in_kv = kAt.size(0) / batch;
     double scaleValue = 1. / std::sqrt(dim);
 
+    c10::optional<at::Tensor> paddingMask = c10::nullopt;
+    c10::optional<at::Tensor> attnMask = c10::nullopt;
     std::array<int64_t, 3> q_bsh_array = {batch, 1, hidden_size_q};
     std::array<int64_t, 3> kv_bsh_array = {batch, max_seq_len_in_kv, hidden_size_kv};
     at::Tensor query = qAt.reshape(q_bsh_array);
@@ -72,7 +78,7 @@ diopiError_t diopiTokenDecodeAttentionInferenceV2(diopiContextHandle_t ctx, diop
     at::Tensor outAtReshaped = outAt.reshape(q_bsh_array);
     b_seq_lenAt = b_seq_lenAt.cpu().to(c10::ScalarType::Long);
     at::IntArrayRef b_seq_len_array(b_seq_lenAt.data_ptr<long>(), batch);
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnIncreFlashAttention, query, keyList, valueList, c10::nullopt, c10::nullopt, b_seq_len_array,
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnIncreFlashAttention, query, keyList, valueList, paddingMask, attnMask, b_seq_len_array,
                                  head_num_q, scaleValue, "BSH", head_num_kv, outAtReshaped);
     END_CALL_ACL_OP();
 }
@@ -105,10 +111,13 @@ diopiError_t diopiTokenDecodeAttentionInferenceBatchOne(diopiContextHandle_t ctx
     at::Tensor key = at::slice(kAt, 0, 0, curSeqLen, 1).view({1, curSeqLen, hidden_size_kv});
     at::Tensor value = at::slice(vAt, 0, 0, curSeqLen, 1).view({1, curSeqLen, hidden_size_kv});
     auto outAtReshaped = outAt.reshape({1, 1, hidden_size_q});
+    c10::optional<at::Tensor> paddingMask = c10::nullopt;
+    c10::optional<at::Tensor> attnMask = c10::nullopt;
+    c10::IntArrayRef actSeqLen = {};
     at::TensorList keyList = key;
     at::TensorList valueList = value;
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnIncreFlashAttention, qAt, keyList, valueList, c10::nullopt, c10::nullopt, c10::nullopt,
-                                    head_num_q, scaleValue, "BSH", head_num_kv, outAtReshaped);
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnIncreFlashAttention, qAt, keyList, valueList, paddingMask, attnMask, actSeqLen,
+                                 head_num_q, scaleValue, "BSH", head_num_kv, outAtReshaped);
     END_CALL_ACL_OP();
 }
 
