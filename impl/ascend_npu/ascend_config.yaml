@@ -12,6 +12,7 @@ ascend:
 - diopiBitwiseOrInp
 - diopiBitwiseOrScalar
 - diopiBitwiseOrInpScalar
+- diopiCol2Im
 - diopiContiguous
 - diopiCrossEntropyLoss
 - diopiCrossEntropyLossBackward
@@ -126,7 +127,6 @@ ascend_npu:
 - diopiRotaryEmbedding
 - diopiRMSNorm
 - diopiRMSNormBackward
-- diopiCol2Im
 - diopiLog
 - diopiLog10
 - diopiLog10Inp
