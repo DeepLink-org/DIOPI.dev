@@ -40,6 +40,7 @@ ascend:
 - diopiEqInp
 - diopiEqInpScalar
 - diopiEqScalar
+- diopiEqual
 - diopiGather
 - diopiGe
 - diopiGeInp
@@ -139,7 +140,6 @@ ascend_npu:
 - diopiCopyInp
 - diopiEmbedding
 - diopiEmbeddingBackward
-- diopiEqual
 - diopiExpand
 - diopiFloor
 - diopiFloorInp
