@@ -6,6 +6,7 @@
 
 #include "../cnnl_helper.hpp"
 #include "../common/common.hpp"
+#include "../triton_op/add_cc_version.h"
 namespace impl {
 namespace camb {
 
