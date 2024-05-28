@@ -15,9 +15,30 @@ diopiError_t diopiAdd(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiCo
     DiopiTensor inputTensor(input);
     DiopiTensor otherTensor(other);
     DiopiTensor outputTensor(out);
+    bool isTriton = ture;
+    if(isTriton){
+        auto queue = getStream(ctx);
+        cnrtDim3_t kDim;
+        int clusterCount = 0;
+        int corePerCluster = 0;
+        cnrtRet_t ret = cnrtDeviceGetAttribute(&clusterCount, cnrtAttrClusterCount, 0);
+        if (ret != cnrtSuccess) {
+            return diopiErrorOccurred;
+        }
+        ret = cnrtDeviceGetAttribute(&corePerCluster, cnrtAttrMcorePerCluster, 0);
+        if (ret != cnrtSuccess) {
+            return diopiErrorOccurred;
+        }
+        kDim.x = corePerCluster;
+        kDim.y = clusterCount;
+        kDim.z = 1;
+        add_cc_version(queue,&kDim,inputTensor.data(),otherTensor.data(),outputTensor.data(),(int)inputTensor.numel());
 
-    DIOPI_CALL(cnnlOpTensor(
+    }else{
+        DIOPI_CALL(cnnlOpTensor(
         ctx, inputTensor, otherTensor, outputTensor, CNNL_OP_TENSOR_ADD, 1.0, DiopiDataType::isFloatPoint(alpha->stype) ? alpha->fval : alpha->ival));
+    }
+   
     return diopiSuccess;
 }
 
