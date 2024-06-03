@@ -214,6 +214,10 @@ ascend_npu:
 - diopiAdamW
 - diopiAdaptiveAvgPool2d
 - diopiAdaptiveAvgPool2dBackward
+- diopiAttention
+- diopiAttentionBackward
+- diopiAttentionVarLen
+- diopiAttentionVarLenBackward
 - diopiBatchNorm
 - diopiBatchNormBackward
 - diopiNonzero
