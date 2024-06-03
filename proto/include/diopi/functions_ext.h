@@ -544,6 +544,12 @@ DIOPI_API diopiError_t diopiRotaryEmbeddingV2(diopiContextHandle_t ctx, diopiTen
 DIOPI_API diopiError_t diopiMatmulAllReduce(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t x1,
                                             diopiConstTensorHandle_t x2, diopiConstTensorHandle_t bias, const char* group,
                                             const char* reduceOp, int64_t commTurn, int64_t streamMode);
+
+DIOPI_API diopiError_t diopiQuantWeightBatchMatmul(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t x,
+                                  diopiConstTensorHandle_t weight, diopiConstTensorHandle_t antiquantScale,
+                                  diopiConstTensorHandle_t antiquantOffsetOptional, diopiConstTensorHandle_t quantScaleOptional,
+                                  diopiConstTensorHandle_t quantOffsetOption, diopiConstTensorHandle_t biasOptional,
+                                  const int64_t antiquantGroupSize);
                                             
 // ============================================lightllm end========================================
 
