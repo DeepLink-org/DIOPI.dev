@@ -206,7 +206,7 @@ aclFormat inferAclDataFormat(int64_t dim, const int64_t* shape, const int64_t* s
         if (thStride == ndhwcStride) {
             return ACL_FORMAT_NDHWC;
         }
-        std::call_once(warningFlag, warnOnUnsupportedFormat, __FILE__, __LINE__, __FUNCTION__);
+        // std::call_once(warningFlag, warnOnUnsupportedFormat, __FILE__, __LINE__, __FUNCTION__);
     } else if (dim == 4) {
         std::array<int64_t, 4> thStride{stride[0], stride[1], stride[2], stride[3]};
         {
@@ -233,7 +233,7 @@ aclFormat inferAclDataFormat(int64_t dim, const int64_t* shape, const int64_t* s
         if (thStride == nhwcStride) {
             return ACL_FORMAT_NHWC;
         }
-        std::call_once(warningFlag, warnOnUnsupportedFormat, __FILE__, __LINE__, __FUNCTION__);
+        // std::call_once(warningFlag, warnOnUnsupportedFormat, __FILE__, __LINE__, __FUNCTION__);
     }
     return ACL_FORMAT_ND;
 }
