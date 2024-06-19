@@ -273,3 +273,4 @@ ascend_npu:
 - diopiPagedAttention
 - diopiRotaryEmbeddingV2
 - diopiMatmulAllReduce
+- diopiMatmulAllReduceAddRmsNorm

@@ -653,6 +653,11 @@ DIOPI_API diopiError_t diopiRotaryEmbeddingV2(diopiContextHandle_t ctx, diopiTen
 DIOPI_API diopiError_t diopiMatmulAllReduce(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t x1, diopiConstTensorHandle_t x2,
                                             diopiConstTensorHandle_t bias, const char* group, const char* reduceOp, int64_t commTurn, int64_t streamMode);
 
+DIOPI_API diopiError_t diopiMatmulAllReduceAddRmsNorm(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiTensorHandle_t out_bf_norm,
+                                                      diopiConstTensorHandle_t x1, diopiConstTensorHandle_t x2, diopiConstTensorHandle_t residual,
+                                                      diopiConstTensorHandle_t bias, diopiConstTensorHandle_t gamma, double eps, const char* group,
+                                                      const char* reduceOp, int64_t commTurn, int64_t streamMode);
+
 DIOPI_API diopiError_t diopiPromptFlashAttention(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t query,
                                                  diopiConstTensorHandle_t key, diopiConstTensorHandle_t value, diopiConstTensorHandle_t atten_mask,
                                                  diopiSize_t actual_seq_lengths, int64_t max_input_len, int64_t num_heads, int64_t num_kv_heads, int64_t dim);
