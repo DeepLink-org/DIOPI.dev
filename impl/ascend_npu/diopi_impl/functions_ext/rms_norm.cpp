@@ -66,4 +66,16 @@ diopiError_t diopiRMSNormBackward(diopiContextHandle_t ctx, diopiTensorHandle_t 
     END_CALL_ACL_OP();
 }
 
+diopiError_t diopiAddRMSNorm(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiTensorHandle_t invRms,
+                             diopiTensorHandle_t addOut,diopiConstTensorHandle_t input, diopiConstTensorHandle_t residual,
+                             diopiConstTensorHandle_t weight, double eps) {
+    BEGIN_CALL_ACL_OP(out, invRms, addOut, input, residual, weight);
+    if (inputAt.scalar_type() == at::kHalf || inputAt.scalar_type() == at::kBFloat16) {
+        TORCH_CHECK(invRmsAt.scalar_type() == at::kFloat, "When the dtype of input is float16 or bfloat16, the dtype of invRms must be float32!");
+    }
+
+    EXEC_NPU_CMD(aclnnAddRmsNorm, inputAt, residualAt, weightAt, eps, outAt, invRmsAt, addOutAt);
+    END_CALL_ACL_OP();
+}
+
 }  // namespace OP_IMPL_NS

@@ -106,6 +106,7 @@ ascend_npu:
 - diopiRotaryEmbedding
 - diopiRMSNorm
 - diopiRMSNormBackward
+- diopiAddRMSNorm
 - diopiCol2Im
 - diopiLog
 - diopiLog10

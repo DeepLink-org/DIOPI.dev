@@ -64,6 +64,21 @@ DIOPI_API diopiError_t diopiRMSNormBackward(diopiContextHandle_t ctx, diopiTenso
                                             diopiConstTensorHandle_t weight, diopiConstTensorHandle_t bias, diopiConstTensorHandle_t inv_rms,
                                             diopiSize_t normalized_shape, double eps);
 
+/**
+ * @brief Apply Add to the input tensor and the residual tensor, then apply Root Mean Square (RMS) Normalization to the add result.
+ * @param[in] ctx The diopi context.
+ * @param[out] out The output tensor containing the normalized values. type = [bfloat16, float16, float32, float64].
+ * @param[out] inv_rms The tensor containing the inverse of root mean square. type = [float32, float64].
+ * @param[out] add_out The tensor containing the add result of input and residual. type = [bfloat16, float16, float32, float64].
+ * @param[in] input The input tensor to be added and normalized. type = [bfloat16, float16, float32, float64].
+ * @param[in] residual The residual tensor to be added and normalized. type = [bfloat16, float16, float32, float64].
+ * @param[in] weight The gain parameter used to re-scale the standardized summed inputs type = [bfloat16, float16, float32, float64].
+ * @param[in] eps A small value to avoid division by zero.
+ */
+DIOPI_API diopiError_t diopiAddRMSNorm(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiTensorHandle_t inv_rms,
+                                       diopiTensorHandle_t add_out,diopiConstTensorHandle_t input, diopiConstTensorHandle_t residual,
+                                       diopiConstTensorHandle_t weight, double eps);
+
 // This interface has been deprecated, please use a more suitable diopiFlashAttention series interface.
 /**
  * @brief Compute the forward pass for MultiheadAttention.
