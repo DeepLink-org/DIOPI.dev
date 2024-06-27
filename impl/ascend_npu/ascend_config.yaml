@@ -167,8 +167,6 @@ ascend:
 - diopiNeInp
 - diopiNeInpScalar
 - diopiNeScalar
-- diopiNLLLossV2
-- diopiNLLLossV2Backward
 - diopiNorm
 - diopiNormal
 - diopiNormalInp
@@ -265,6 +263,8 @@ ascend_npu:
 - diopiTensorDestructionHook
 - diopiNLLLoss
 - diopiNLLLossBackward
+- diopiNLLLossV2
+- diopiNLLLossV2Backward
 - diopiFlashAttention
 - diopiFlashAttentionBackward
 - diopiFlashAttentionV2
