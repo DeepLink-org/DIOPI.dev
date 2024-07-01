@@ -15,7 +15,7 @@ diopiError_t diopiAdd(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiCo
     DiopiTensor inputTensor(input);
     DiopiTensor otherTensor(other);
     DiopiTensor outputTensor(out);
-    bool isTriton = ture;
+    bool isTriton = false;
     if(isTriton){
         auto queue = getStream(ctx);
         cnrtDim3_t kDim;
