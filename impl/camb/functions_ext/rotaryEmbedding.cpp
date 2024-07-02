@@ -12,6 +12,7 @@
 
 #include "../cnnl_helper.hpp"
 #include "../common/common.hpp"
+#include "../common/debug.hpp"
 #include "../mlu_helper.hpp"
 // #include "../triton_op/librotary.a"
 #include "../triton_op/rotary_emb_cc_version.h"
@@ -30,12 +31,17 @@ diopiError_t diopiRotaryEmbedding(diopiContextHandle_t ctx, diopiTensorHandle_t 
         DiopiTensor sinTensor(sin);
         DiopiTensor outputTensor(out);
 
-        cnrtDim3_t *kDim;
-        kDim->x = inputTensor.shape()[1]/128;
-        kDim->y = 1;
-        kDim->z = 1;
+        printDevData(ctx, inputTensor);
+        printDevData(ctx, cosTensor);
+        printDevData(ctx, sinTensor);
+        printDevData(ctx, outputTensor);
 
-        rotary_emb_cc_version(queue, kDim, 
+        cnrtDim3_t kDim;
+        kDim.x = (inputTensor.shape()[1])/128;
+        kDim.y = 1;
+        kDim.z = 1;
+
+        rotary_emb_cc_version(queue, &kDim, 
             outputTensor.data(), inputTensor.data(), cosTensor.data(), sinTensor.data(), 0, 
             (int)inputTensor.shape()[1], (int)inputTensor.shape()[2], (int)inputTensor.shape()[3], (int)cosTensor.shape()[0], 
             (int)outputTensor.stride()[0], (int)outputTensor.stride()[1], (int)outputTensor.stride()[2], (int)outputTensor.stride()[3], 
