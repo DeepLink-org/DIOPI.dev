@@ -36,16 +36,16 @@ diopiError_t diopiNLLLossV2(diopiContextHandle_t ctx, diopiTensorHandle_t out, d
     }
 
     if (inputAt.dim() <= 2) {
-        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLoss, ctx, input, target, weightTmp, reduction, ignoreIndex, out, totalWeight);
+        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLoss, ctx, input, target, weightTmp, static_cast<int64_t>(reduction), ignoreIndex, out, totalWeight);
     } else if (inputAt.dim() == 4) {
-        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLoss2d, ctx, input, target, weightTmp, reduction, ignoreIndex, out, totalWeight);
+        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLoss2d, ctx, input, target, weightTmp, static_cast<int64_t>(reduction), ignoreIndex, out, totalWeight);
     } else {
         AscendTensor outAt(out);
         AscendTensor targetAt(target);
         AscendTensor inputView = inputAt.view({inputAt.shape(0), inputAt.shape(1), inputAt.numel() / inputAt.shape(0) / inputAt.shape(1), 1});
         AscendTensor outView = (outAt.numel() > 1) ? outAt.view({outAt.shape(0), outAt.numel() / outAt.shape(0), 1}) : outAt;
         AscendTensor targetView = targetAt.view({targetAt.shape(0), targetAt.numel() / targetAt.shape(0), 1});
-        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLoss2d, ctx, inputView, targetView, weightTmp, reduction, ignoreIndex, outView, totalWeight);
+        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLoss2d, ctx, inputView, targetView, weightTmp, static_cast<int64_t>(reduction), ignoreIndex, outView, totalWeight);
     }
 
     return diopiSuccess;
@@ -74,9 +74,11 @@ diopiError_t diopiNLLLossV2Backward(diopiContextHandle_t ctx, diopiTensorHandle_
     }
 
     if (inputAt.dim() <= 2) {
-        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLossBackward, ctx, gradOutput, input, target, weightTmp, reduction, ignoreIndex, totalWeight, gradInput);
+        DIOPI_ASCEND_CALL_ACLNN(
+            aclnnNLLLossBackward, ctx, gradOutput, input, target, weightTmp, static_cast<int64_t>(reduction), ignoreIndex, totalWeight, gradInput);
     } else if (inputAt.dim() == 4) {
-        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLoss2dBackward, ctx, gradOutput, input, target, weightTmp, reduction, ignoreIndex, totalWeight, gradInput);
+        DIOPI_ASCEND_CALL_ACLNN(
+            aclnnNLLLoss2dBackward, ctx, gradOutput, input, target, weightTmp, static_cast<int64_t>(reduction), ignoreIndex, totalWeight, gradInput);
     } else {
         AscendTensor gradIputAt(gradInput);
         AscendTensor gradOutputAt(gradOutput);
@@ -92,8 +94,16 @@ diopiError_t diopiNLLLossV2Backward(diopiContextHandle_t ctx, diopiTensorHandle_
             gradOutputView = gradOutputAt;
         }
         AscendTensor targetView = targetAt.view({targetAt.shape(0), targetAt.numel() / targetAt.shape(0), 1});
-        DIOPI_ASCEND_CALL_ACLNN(
-            aclnnNLLLoss2dBackward, ctx, gradOutputView, inputView, targetView, weightTmp, reduction, ignoreIndex, totalWeight, gradInputView);
+        DIOPI_ASCEND_CALL_ACLNN(aclnnNLLLoss2dBackward,
+                                ctx,
+                                gradOutputView,
+                                inputView,
+                                targetView,
+                                weightTmp,
+                                static_cast<int64_t>(reduction),
+                                ignoreIndex,
+                                totalWeight,
+                                gradInputView);
     }
     return diopiSuccess;
 }
