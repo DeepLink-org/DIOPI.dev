@@ -13,8 +13,7 @@
 #include "../cnnl_helper.hpp"
 #include "../common/common.hpp"
 #include "../mlu_helper.hpp"
-// #include "../triton_op/librotary.a"
-#include "../triton_op/rotary_emb_cc_v2.h"
+#include "../triton_op/rotary_emb_cc_fp16.h"
 
 namespace impl {
 namespace camb {
@@ -35,7 +34,7 @@ diopiError_t diopiRotaryEmbedding(diopiContextHandle_t ctx, diopiTensorHandle_t 
         kDim.y = inputTensor.shape()[0];
         kDim.z = 1;
 
-        rotary_emb_cc_v2(queue, &kDim, 
+        rotary_emb_cc_fp16(queue, &kDim, 
             outputTensor.data(), inputTensor.data(), cosTensor.data(), sinTensor.data(),
             (int)inputTensor.shape()[1], (int)inputTensor.shape()[2], (int)inputTensor.shape()[3], (int)cosTensor.shape()[0], 
             (int)outputTensor.stride()[0], (int)outputTensor.stride()[1], (int)outputTensor.stride()[2], (int)outputTensor.stride()[3], 
