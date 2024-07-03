@@ -54,7 +54,7 @@ if(USE_ADAPTOR)
     set(ADAPTOR_CSRC_PATH "${ADAPTOR_DIR}/csrc")
     set(GEN_FILES ${ADAPTOR_CSRC_PATH}/diopi_adaptor.cpp ${ADAPTOR_CSRC_PATH}/impl_functions.hpp)
     add_custom_target(adaptor_code_gen
-        COMMAND python3 ${ADAPTOR_DIR}/codegen/gen.py --diopi_dir=${DIOPI_IMPL_DIR}/../ --output_dir=${ADAPTOR_CSRC_PATH} --config_device=camb
+        COMMAND python3 ${ADAPTOR_DIR}/codegen/gen.py --diopi_dir=${CMAKE_SOURCE_DIR}/../ --output_dir=${ADAPTOR_CSRC_PATH} --config_device=camb
         BYPRODUCTS ${GEN_FILES}
         DEPENDS adaptor_gen_dependency)
     list(APPEND IMPL_SRC ${ADAPTOR_CSRC_PATH}/convert.cpp ${ADAPTOR_CSRC_PATH}/diopi_adaptor.cpp ${ADAPTOR_CSRC_PATH}/composite_ops.cpp)
@@ -65,11 +65,25 @@ BANG_ADD_LIBRARY(${DEVICEIMPL} SHARED ${IMPL_SRC})
 # third_party include
 set(THIRD_PARTY_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/half/include)
 
+set(TRITON_OP_INCLUDE  ${CMAKE_CURRENT_SOURCE_DIR}/triton_op)
 set_target_properties(${DEVICEIMPL} PROPERTIES SUFFIX ".so")
-target_link_libraries(${DEVICEIMPL} cndev cnrt cnnl cnmlrt cnnl_extra mluops)
-target_include_directories(${DEVICEIMPL} SYSTEM PUBLIC ${THIRD_PARTY_INCLUDE_DIRS})
+target_link_libraries(${DEVICEIMPL} cndev cnrt cnnl cnmlrt cnnl_extra mluops ${CMAKE_CURRENT_SOURCE_DIR}/triton_op/libtritonop.a)
+target_include_directories(${DEVICEIMPL} SYSTEM PUBLIC ${THIRD_PARTY_INCLUDE_DIRS} ${TRITON_OP_INCLUDE})
 if(USE_ADAPTOR)
     add_dependencies(${DEVICEIMPL} adaptor_code_gen)
+endif()
+
+if(USE_TRITON_PLUGINS)
+    # add_library(triton_op_lib STATIC IMPORTED)
+    # file(GLOB TRITON_OP RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} triton_op/*.a)
+    message("******directory is********${CMAKE_CURRENT_SOURCE_DIR}*************")
+    # set_target_properties(triton_op_lib PROPERTIES IMPORTED_LOCATION ${TRITON_OP})
+    target_link_libraries(${DEVICEIMPL} ${CMAKE_CURRENT_SOURCE_DIR}/triton_op/libtritonop.a)
+    message("****device impl*****${DEVICEIMPL}******************")
+
+    set(TRITON_OP_INCLUDE  ${CMAKE_CURRENT_SOURCE_DIR}/triton_op)
+    message("**************${TRITON_OP}*************")
+    target_include_directories(${DEVICEIMPL} SYSTEM PUBLIC ${TRITON_OP_INCLUDE})
 endif()
 
 if (TEST)

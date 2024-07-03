@@ -39,7 +39,7 @@ diopiError_t diopiRotaryEmbedding(diopiContextHandle_t ctx, diopiTensorHandle_t 
             outputTensor.data(), inputTensor.data(), cosTensor.data(), sinTensor.data(),
             (int)inputTensor.shape()[1], (int)inputTensor.shape()[2], (int)inputTensor.shape()[3], (int)cosTensor.shape()[0], 
             (int)outputTensor.stride()[0], (int)outputTensor.stride()[1], (int)outputTensor.stride()[2], (int)outputTensor.stride()[3], 
-            (int)inputTensor.stride()[0], (int)inputTensor.stride()[1], (int)inputTensor.stride()[2], (int)inputTensor.stride()[3], 0);
+            (int)inputTensor.stride()[0], (int)inputTensor.stride()[1], (int)inputTensor.stride()[2], (int)inputTensor.stride()[3], conj? 1 : 0);
         
         return diopiSuccess;
 
