@@ -10,6 +10,7 @@
 #include <diopi/diopirt.h>
 
 #include <cstdint>
+#include <string>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -633,6 +634,16 @@ DIOPI_API diopiError_t diopiContextAttentionInference(diopiContextHandle_t ctx, 
 DIOPI_API diopiError_t diopiRotaryEmbeddingV2(diopiContextHandle_t ctx, diopiTensorHandle_t query, diopiTensorHandle_t key, diopiConstTensorHandle_t cos,
                                               diopiConstTensorHandle_t sin, int64_t dim);
 
+
+
+
+DIOPI_API diopiError_t diopiFFN(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiTensorHandle_t query, diopiTensorHandle_t weight1,
+                                diopiTensorHandle_t weight2, diopiSize_t expertTokens, const char* activation);
+
+
+
+DIOPI_API diopiError_t diopiMoeGatingTopKSoftmax(diopiContextHandle_t ctx, diopiTensorHandle_t routing_weights, diopiTensorHandle_t selected_experts,
+                                                 diopiTensorHandle_t selected_idx, diopiTensorHandle_t router_logits, int64_t topk);
 /**
  * @brief The fused operation of Matmul and AllReduce.
  * @param[in] ctx The diopi context.
