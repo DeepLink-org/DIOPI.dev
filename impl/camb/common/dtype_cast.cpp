@@ -208,6 +208,9 @@ diopiError_t autoCastTensorType(diopiContextHandle_t ctx, const std::vector<Diop
         return diopiDtypeNotSupported;
     }
     for (const auto& pTensor : pTensors) {
+        if(pTensor->dtype() == diopi_dtype_bfloat16){
+            continue;
+        }
         DIOPI_CALL(dataTypeCast(ctx, *pTensor, targetType));
     }
     return diopiSuccess;

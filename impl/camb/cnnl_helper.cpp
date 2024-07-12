@@ -36,6 +36,9 @@ diopiError_t CnnlDataType::convertToCnnlType(cnnlDataType_t* cnnlType, diopiDtyp
         case diopi_dtype_float64:
             *cnnlType = CNNL_DTYPE_DOUBLE;
             break;
+        case diopi_dtype_bfloat16 :
+            *cnnlType = CNNL_DTYPE_BFLOAT16;
+            break;
         case diopi_dtype_int16:
             *cnnlType = CNNL_DTYPE_INT16;
             break;
