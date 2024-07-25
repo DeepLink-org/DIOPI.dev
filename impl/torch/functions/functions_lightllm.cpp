@@ -16,7 +16,7 @@ namespace impl {
 namespace cuda {
 
 diopiError_t diopiDestIndexCopyKV(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t k, diopiConstTensorHandle_t destLoc) {
-    impl::aten::setCurStream(ctx);
+    impl::aten::ContextManger contextManger(ctx);
     at::Tensor atOut = impl::aten::buildATen(out);
     at::Tensor atK = impl::aten::buildATen(k);
     at::Tensor atDestLoc = impl::aten::buildATen(destLoc);
@@ -28,7 +28,7 @@ diopiError_t diopiDestIndexCopyKV(diopiContextHandle_t ctx, diopiTensorHandle_t 
 diopiError_t diopiApplyPenalty(diopiContextHandle_t ctx, diopiTensorHandle_t logits, diopiConstTensorHandle_t presencePenalty,
                                diopiConstTensorHandle_t frequencyPenalty, diopiConstTensorHandle_t pTokenIds, diopiConstTensorHandle_t pTokenCounts,
                                diopiConstTensorHandle_t pCumsumSeqLen, int pMaxLenInBatch) {
-    impl::aten::setCurStream(ctx);
+    impl::aten::ContextManger contextManger(ctx);
     at::Tensor atLogits = impl::aten::buildATen(logits);
     at::Tensor atPresencePenalty = impl::aten::buildATen(presencePenalty);
     at::Tensor atFrequencyPenalty = impl::aten::buildATen(frequencyPenalty);
@@ -53,7 +53,7 @@ diopiError_t diopiApplyPenalty(diopiContextHandle_t ctx, diopiTensorHandle_t log
 diopiError_t diopiTokenAttentionInference(diopiContextHandle_t ctx, diopiTensorHandle_t attentionOut, diopiConstTensorHandle_t q, diopiConstTensorHandle_t k,
                                           diopiConstTensorHandle_t bLoc, diopiConstTensorHandle_t bStartLoc, diopiConstTensorHandle_t bSeqLen,
                                           int maxInputLen) {
-    impl::aten::setCurStream(ctx);
+    impl::aten::ContextManger contextManger(ctx);
     at::Tensor atQ = impl::aten::buildATen(q);
     at::Tensor atK = impl::aten::buildATen(k);
     at::Tensor atBLoc = impl::aten::buildATen(bLoc);
@@ -82,7 +82,7 @@ diopiError_t diopiTokenAttentionInference(diopiContextHandle_t ctx, diopiTensorH
 diopiError_t diopiTokenSoftmaxReduceVInference(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t logics, diopiConstTensorHandle_t v,
                                                diopiConstTensorHandle_t bLoc, diopiConstTensorHandle_t bStartLoc, diopiConstTensorHandle_t bSeqLen,
                                                int maxInputLen, int otherKVIndex) {
-    impl::aten::setCurStream(ctx);
+    impl::aten::ContextManger contextManger(ctx);
     at::Tensor atOut = impl::aten::buildATen(out);
     at::Tensor atV = impl::aten::buildATen(v);
     at::Tensor atLogics = impl::aten::buildATen(logics);
@@ -126,7 +126,7 @@ at::Tensor torchContextAttention(at::Tensor xq, at::Tensor xk, at::Tensor xv, in
 
 diopiError_t diopiContextAttentionInference(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t q, diopiConstTensorHandle_t k,
                                             diopiConstTensorHandle_t v, diopiConstTensorHandle_t bStartLoc, diopiConstTensorHandle_t bSeqLen, int maxInputLen) {
-    impl::aten::setCurStream(ctx);
+    impl::aten::ContextManger contextManger(ctx);
     at::Tensor atOut = impl::aten::buildATen(out);
     at::Tensor atQ = impl::aten::buildATen(q);
     at::Tensor atK = impl::aten::buildATen(k);

@@ -22,7 +22,7 @@
 namespace impl::aten {
 
 UnsafelyDeviceChangedTensorWrapper::UnsafelyDeviceChangedTensorWrapper(const at::Tensor& tensor) : at::Tensor(tensor) {
-    if (!defined() || is_cpu()) {
+    if (!defined() || is_cpu() || device().type() == at::DeviceType::CUDA) {
         return;
     }
     saveForRevert_.emplace(unsafeGetTensorImpl(), device());
@@ -39,11 +39,23 @@ UnsafelyDeviceChangedTensorWrapper::~UnsafelyDeviceChangedTensorWrapper() {
     }
 }
 
+UnsafelyDeviceChangedTensorWrapper& UnsafelyDeviceChangedTensorWrapper::operator=(const at::Tensor& other) {
+    auto wrapper = createFromTensor(other);
+    *this = std::move(wrapper);
+    return *this;
+}
+
+UnsafelyDeviceChangedTensorWrapper& UnsafelyDeviceChangedTensorWrapper::operator=(at::Tensor&& other) {
+    auto wrapper = createFromTensor(other);
+    *this = std::move(wrapper);
+    return *this;
+}
+
 UnsafelyDeviceChangedTensorWrapper buildATenUnsafe(diopiConstTensorHandle_t tensor) {
     if (tensor == nullptr) {
         return {};
     }
-    auto& atTensor = *reinterpret_cast<at::Tensor*>(const_cast<diopiTensorHandle_t>(tensor));
+    auto atTensor = *reinterpret_cast<at::Tensor*>(const_cast<diopiTensorHandle_t>(tensor));
     return UnsafelyDeviceChangedTensorWrapper::createFromTensor(atTensor);
 }
 

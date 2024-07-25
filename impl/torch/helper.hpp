@@ -55,22 +55,11 @@ namespace aten {
 
 constexpr size_t MAX_GPU_NUMS = 16;
 
-inline void setCurStream(diopiContextHandle_t ctx) {
-    static thread_local std::array<diopiStreamHandle_t, MAX_GPU_NUMS> current_streams = {};
-
-    diopiStreamHandle_t stream_handle;
-    diopiGetStream(ctx, &stream_handle);
-
-    int device_id = c10::cuda::current_device();
-    TORCH_CHECK(device_id >= 0 && device_id < MAX_GPU_NUMS, "device_id is out of range");
-
-    // Reduce the number of calls to setCurrentCUDAStream. Only the current stream for the device is not the same as the stream_handle, set the stream.
-    if (current_streams[device_id] != stream_handle) {
-        c10::cuda::CUDAStream cur_stream = c10::cuda::getStreamFromExternal(static_cast<cudaStream_t>(stream_handle), device_id);
-        c10::cuda::setCurrentCUDAStream(cur_stream);
-        current_streams[device_id] = stream_handle;
-    }
-}
+class ContextManger {
+public:
+    ContextManger(diopiContextHandle_t context);
+    ~ContextManger();
+};
 
 inline void sync(diopiContextHandle_t ctx) {
     diopiStreamHandle_t stream_handle;
@@ -111,7 +100,7 @@ inline void updateATen2Tensor(diopiContextHandle_t ctx, const at::Tensor& atOut,
         at::Tensor atOutput = buildATen(out).reshape_as(atOut);
         // Set non_blocking=true to improve performance.
         // The data is not ready when this function returns.
-        at::native::copy_(atOutput, atOut, true);
+        at::native::copy_(atOutput, atOut, false);
     }
 }
 

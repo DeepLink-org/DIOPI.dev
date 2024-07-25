@@ -33,14 +33,8 @@ public:
         saveForRevert_.swap(other.saveForRevert_);
         return *this;
     }
-    UnsafelyDeviceChangedTensorWrapper& operator=(const at::Tensor& other) {
-        at::Tensor::operator=(other);
-        return *this;
-    }
-    UnsafelyDeviceChangedTensorWrapper& operator=(at::Tensor&& other) {
-        at::Tensor::operator=(std::move(other));
-        return *this;
-    }
+    UnsafelyDeviceChangedTensorWrapper& operator=(const at::Tensor& other);
+    UnsafelyDeviceChangedTensorWrapper& operator=(at::Tensor&& other);
 
 private:
     explicit UnsafelyDeviceChangedTensorWrapper(const at::Tensor& tensor);
@@ -58,19 +52,25 @@ private:
 [[nodiscard]] at::Tensor buildATenSafe(diopiConstTensorHandle_t tensor);
 
 [[nodiscard]] inline auto buildATen(diopiConstTensorHandle_t tensor) {
-#if DIOPI_TORCH_UNSAFE_BUILDATEN
+    //const at::Tensor out = *reinterpret_cast<const at::Tensor*>(tensor);
+    //return out;
+
+//#if 0 && DIOPI_TORCH_UNSAFE_BUILDATEN
+#if 1
     return buildATenUnsafe(tensor);
 #else
     return buildATenSafe(tensor);
 #endif
+
 }
 
 template <typename T>
 [[nodiscard]] auto buildATenList(T* tensors, int64_t numTensors) {
     using TensorType = decltype(buildATen(std::declval<diopiConstTensorHandle_t>()));
-    c10::SmallVector<TensorType, 4> vecAtTensor;
+    std::vector<TensorType> vecAtTensor;
     vecAtTensor.reserve(numTensors);
     std::transform(tensors, tensors + numTensors, std::back_inserter(vecAtTensor), [](auto tensor) { return buildATen(tensor); });
+
     return vecAtTensor;
 }
 

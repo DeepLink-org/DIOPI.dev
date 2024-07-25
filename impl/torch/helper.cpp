@@ -94,7 +94,10 @@ at::Scalar buildAtScalar(const diopiScalar_t* scalar) {
     }
 }
 
+thread_local std::map<void*, at::Tensor> requiredTensorMap;
+
 void buildDiopiTensor(diopiContextHandle_t ctx, const at::Tensor& input, diopiTensorHandle_t* out) {
+#if 1
     at::IntArrayRef atSize = input.sizes();
     at::IntArrayRef atStride = input.strides();
     diopiSize_t size{atSize.data(), static_cast<int64_t>(atSize.size())};
@@ -103,6 +106,10 @@ void buildDiopiTensor(diopiContextHandle_t ctx, const at::Tensor& input, diopiTe
     diopiDevice_t device = getDIOPIDevice(input.device().type());
     diopiRequireTensor(ctx, out, &size, &stride, dtype, device);
     updateATen2Tensor(ctx, input, *out);
+    requiredTensorMap[input.data_ptr()] = input;
+#endif
+    // requiredTensorMap[input.data()] = input;
+    //*out = static_cast<>(&requiredTensorMap[input.data()];
 }
 
 // new cuda generator and pass dipu generator state into cuda generator state
@@ -300,6 +307,40 @@ at::Tensor crossEntropyLossLabelSmoothingBackward(at::Tensor& atInput, at::Tenso
     atLogSoftmaxOutput = at::log_softmax(atInput, 1, atInput.scalar_type());
     auto atGradInputFinal = at::_log_softmax_backward_data(atGradInput, atLogSoftmaxOutput, 1, atLogSoftmaxOutput.scalar_type());
     return atGradInputFinal;
+}
+
+static void setCurStream(diopiContextHandle_t ctx) {
+    static thread_local std::array<diopiStreamHandle_t, MAX_GPU_NUMS> current_streams = {};
+
+    diopiStreamHandle_t stream_handle;
+    diopiGetStream(ctx, &stream_handle);
+
+    int device_id = c10::cuda::current_device();
+    TORCH_CHECK(device_id >= 0 && device_id < MAX_GPU_NUMS, "device_id is out of range");
+
+    // Reduce the number of calls to setCurrentCUDAStream. Only the current stream for the device is not the same as the stream_handle, set the stream.
+    if (current_streams[device_id] != stream_handle || 1) {
+        c10::cuda::CUDAStream cur_stream = c10::cuda::getStreamFromExternal(static_cast<cudaStream_t>(stream_handle), device_id);
+        c10::cuda::setCurrentCUDAStream(cur_stream);
+        current_streams[device_id] = stream_handle;
+    }
+}
+
+thread_local int context_use_counter = 0;
+thread_local diopiContextHandle_t context;
+
+ContextManger::ContextManger(diopiContextHandle_t ctx) {
+    if (context_use_counter == 0) {
+        requiredTensorMap.clear();
+        setCurStream(ctx);
+    }
+    context_use_counter++;
+}
+
+ContextManger::~ContextManger() {
+    context_use_counter--;
+    if (context_use_counter == 0) {
+    }
 }
 
 }  // namespace aten
