@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <numeric>
 #include <string>
 #include <type_traits>
@@ -180,6 +181,44 @@ diopiError_t reshape(diopiContextHandle_t ctx, const AscendTensor& src, AscendTe
     DIOPI_ASCEND_CALL_ACLNN(aclnnInplaceCopy, ctx, outAt, tmp);
     dst = outAt;
     return diopiSuccess;
+}
+
+AscendTensor reshape(diopiContextHandle_t ctx, const AscendTensor& src, const std::vector<int64_t>& shape) {
+    std::cout << "come into reshape......" << std::endl;
+    ASCEND_CHECK_ABORT(src.defined(), "input tensor is nullptr.");
+
+    if (src.shape() == shape) {
+        std::cout << "shape is same, return src tensor pointer=" << src.tensorHandle() << std::endl;
+        return src;
+    }
+
+    int64_t expectedSize = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int64_t>());
+    ASCEND_CHECK_THROW(expectedSize == src.numel(), "reshape size not match, expect %ld, but got %ld", expectedSize, src.numel());
+
+    {
+        diopiTensorHandle_t out = nullptr;
+        diopiSize_t outShape{shape.data(), static_cast<int64_t>(shape.size())};
+        diopiRequireTensor(ctx, &out, &outShape, nullptr, src.dtype(), diopi_device);
+        AscendTensor outAt(out), tmp(src);
+        tmp.view(shape);
+        DIOPI_ASCEND_CALL_ACLNN(aclnnInplaceCopy, ctx, outAt, tmp);
+        return outAt;
+    }
+
+    AscendTensor result;
+    if (src.isContiguous()) {
+        result = src;
+        result.view(shape);
+        std::cout << "isContiguous reshape tensor pointer=" << result.tensorHandle() << std::endl;
+        return result;
+    }
+
+    std::cout << "not isContiguous, make tensor......" << std::endl;
+    makeTensor(ctx, result, shape, src.dtype());
+    std::cout << "make tensor pointer=" << result.tensorHandle() << std::endl;
+    DIOPI_ASCEND_CALL_ACLNN(aclnnInplaceCopy, ctx, result, src);
+
+    return AscendTensor(result.tensorHandle());
 }
 
 diopiError_t aclAsStridedCore(diopiContextHandle_t ctx, const AscendTensor& src, AscendTensor& dst) {
