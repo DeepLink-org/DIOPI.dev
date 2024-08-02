@@ -149,28 +149,22 @@ class CustomizedTest(object):
         return param, exp_avg, exp_avg_sq, max_exp_avg_sq
 
     def adamw(
-        param,
-        param_grad,
-        exp_avg,
-        exp_avg_sq,
-        max_exp_avg_sq,
+        params,
+        grads,
+        exp_avgs,
+        exp_avg_sqs,
+        max_exp_avg_sqs,
+        state_steps,
         lr,
         beta1,
         beta2,
         eps,
-        step,
         weight_decay,
         amsgrad,
+        maximize,
     ):
-        params_with_grad = [param]
-        grads = [param_grad]
-        exp_avgs = [exp_avg]
-        exp_avg_sqs = [exp_avg_sq]
-        max_exp_avg_sqs = [max_exp_avg_sq]
-        state_steps = [torch.tensor(float(step))]
-
         torch.optim._functional.adamw(
-            params_with_grad,
+            params,
             grads,
             exp_avgs,
             exp_avg_sqs,
@@ -182,9 +176,9 @@ class CustomizedTest(object):
             lr=lr,
             weight_decay=weight_decay,
             eps=eps,
-            maximize=False,
+            maximize=maximize,
         )
-        return param, exp_avg, exp_avg_sq, max_exp_avg_sq
+        return params, exp_avgs, exp_avg_sqs, max_exp_avg_sqs
 
     def adadelta(param, param_grad, square_avg, acc_delta, lr, rho, eps, weight_decay):
         params_with_grad = [param]
