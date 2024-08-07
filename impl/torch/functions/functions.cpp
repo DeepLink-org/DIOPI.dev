@@ -30,6 +30,7 @@
 
 #include "../helper.hpp"
 #include "../vision_kernel.h"
+#include "../mx_helper.hpp"
 
 namespace impl {
 namespace cuda {
@@ -2161,8 +2162,10 @@ diopiError_t diopiConvolution2dBackward(diopiContextHandle_t ctx, diopiTensorHan
         at::native::copy_(atGradWeight, std::get<1>(tempOut), true);
         at::native::copy_(atGradBias, std::get<2>(tempOut), true);
     } else {
-        auto results = at::convolution_backward(
+        auto results = at::native::convolution_backward_helper(
             atGrad, atInput, atWeight, c10::nullopt, atStride, atPadding, atDilation, false, outputPadding, groups, {true, true, false});
+        // auto results = convolution_backward(
+        //     atGrad, atInput, atWeight, c10::nullopt, atStride, atPadding, atDilation, false, outputPadding, groups, {true, true, false});
         impl::aten::updateATen2Tensor(ctx, std::get<0>(results), grad_input);
         impl::aten::updateATen2Tensor(ctx, std::get<1>(results), grad_weight);
         if (bias_sizes && grad_bias) {
