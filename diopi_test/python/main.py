@@ -9,6 +9,9 @@ from conformance.global_op_list import nhwc_op, dtype_op, dtype_out_op
 from conformance.utils import logger
 from conformance.global_settings import glob_vars
 from conformance.model_list import model_list, model_op_list
+
+from conformance.diopi_functions import finalize
+
 sys.path.append("../python/configs")
 
 
@@ -203,6 +206,6 @@ if __name__ == "__main__":
             raise SystemExit(exit_code)
     else:
         print("available options for mode: gen_data, gen_case, run_test and utest")
-
+    finalize()
     # if is_ci != "null" and error_counter[0] != 0:
     #     raise DiopiException(str(error_counter[0]) + " errors during this program")

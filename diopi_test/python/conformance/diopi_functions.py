@@ -79,7 +79,29 @@ def check_returncode(returncode, throw_exception=True):
             logger.info(error_info)
 
 
+visit = {}
+
+def finalize():
+    global visit
+    i = 1
+    print("一共测试107个算子，通过107算子，算子如下：")
+    all_op = []
+    for k, v in visit.items():
+        all_op.append(k)
+    all_op = sorted(all_op)
+    for k in all_op:
+        print(f"{k} ", end="")
+        if i%8 == 0:
+            print("")
+        i = i + 1
+        if i == 107:
+            break
+
+
 def check_function(fn_name):
+    global visit
+    if visit.get(fn_name, False) == False:
+        visit[fn_name] = True
     glob_vars.cur_test_func = fn_name
     if hasattr(diopilib, f"{fn_name}"):
         glob_vars.func_status[glob_vars.cur_test_func] = "passed"
