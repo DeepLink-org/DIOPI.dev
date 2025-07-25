@@ -3587,7 +3587,7 @@ DIOPI_API diopiError_t diopiProd(diopiContextHandle_t ctx, diopiTensorHandle_t o
  * @param[in] input the input tensor. Supported data types: [float32, float16 int8, uint8, int16, int32, int64].
  * @param[out] out the output tensor (scalar). 
  */
- DIOPI_API diopiError_t diopiMedian(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input);
+DIOPI_API diopiError_t diopiMedian(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input);
 
 /**
  * @brief The Connectionist Temporal Classification loss.
