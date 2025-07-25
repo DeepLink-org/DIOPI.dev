@@ -259,6 +259,12 @@ ascend:
 - diopiSubInpScalar
 - diopiSubScalar
 - diopiSum
+- diopiTan
+- diopiTanInp
+- diopiAtan
+- diopiAtanInp
+- diopiAtanh
+- diopiAtanhInp
 - diopiTanh
 - diopiTanhBackward
 - diopiTanhInp
