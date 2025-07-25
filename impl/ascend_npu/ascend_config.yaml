@@ -232,6 +232,12 @@ ascend:
 - diopiSiluInp
 - diopiSin
 - diopiSinInp
+- diopiAsin
+- diopiAsinInp
+- diopiSinh
+- diopiSinhInp
+- diopiAsinh
+- diopiAsinhInp
 - diopiSlice
 - diopiSliceBackward
 - diopiSoftmax
