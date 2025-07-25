@@ -7066,6 +7066,24 @@ diopi_configs = {
         ),
     ),
 
+    'median': dict(
+        name=['median'],
+        interface=['torch'],
+        atol_half=1e-4,
+        rtol_half=1e-3,
+        tensor_para=dict(
+            args=[
+                {
+                    "ins": ['input'],
+                    "shape": ((9,), (142,), (403,), (12, 7), (103, 22), (512, 32)),
+                    "dtype": [np.float32, np.int8, np.uint8, np.int16,
+                              np.int32, np.int64,],
+                    "gen_fn": 'Genfunc.randn',
+                },
+            ],
+        ),
+    ),
+
     # FIXME ctc_loss输入int8, uint8, int16报错
     'ctc_loss': dict(
         name=["ctc_loss"],

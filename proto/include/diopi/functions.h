@@ -3582,6 +3582,14 @@ DIOPI_API diopiError_t diopiUnique(diopiContextHandle_t ctx, diopiTensorHandle_t
 DIOPI_API diopiError_t diopiProd(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, const int64_t* dim);
 
 /**
+ * @brief Computes the median value of all elements in the input tensor.
+ * @param[in] ctx Context environment.
+ * @param[in] input the input tensor. Supported data types: [float32, float16 int8, uint8, int16, int32, int64].
+ * @param[out] out the output tensor (scalar). 
+ */
+ DIOPI_API diopiError_t diopiMedian(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input);
+
+/**
  * @brief The Connectionist Temporal Classification loss.
  * @param[in] ctx Context environment.
  * @param[in] neg_log_likelihood

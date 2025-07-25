@@ -6506,6 +6506,14 @@ def prod(input, dim=None, keepdim=False, dtype=None) -> Tensor:
     return out
 
 
+def median(input) -> Tensor:
+    out = Tensor([1], input.get_dtype())
+    func = check_function("diopiMedian")
+    ret = func(input.context(), out, input)
+    check_returncode(ret)
+    return out
+
+
 def linear_backward(input, grad_outputs, weight, bias=None, **kwargs):
     assert len(grad_outputs) == 1, "only accept 1 gradient to do backward"
 

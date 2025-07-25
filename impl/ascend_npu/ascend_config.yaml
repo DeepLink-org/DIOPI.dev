@@ -203,6 +203,7 @@ ascend:
 - diopiPowScalar
 - diopiPowTensor
 - diopiProd
+- diopiMedian
 - diopiPromptFlashAttention
 - diopiRMSNorm
 - diopiRMSNormBackward

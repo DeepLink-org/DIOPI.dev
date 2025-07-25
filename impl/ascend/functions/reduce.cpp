@@ -143,5 +143,10 @@ diopiError_t diopiProd(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiC
     return diopiSuccess;
 }
 
+diopiError_t diopiMedian(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnMedian, ctx, input, out);
+    return diopiSuccess;
+}
+
 }  // namespace ascend
 }  // namespace impl
