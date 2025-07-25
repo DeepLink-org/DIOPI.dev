@@ -89,6 +89,22 @@ diopiError_t diopiLog10Inp(diopiContextHandle_t ctx, diopiTensorHandle_t input) 
     return diopiSuccess;
 }
 
+
+diopiError_t diopiLog1p(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnLog1p, ctx, input, out);
+    return diopiSuccess;
+}
+
+diopiError_t diopiLog1pInp(diopiContextHandle_t ctx, diopiTensorHandle_t input) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnInplaceLog1p, ctx, input);
+    return diopiSuccess;
+}
+
+diopiError_t diopiSign(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnSign, ctx, input, out);
+    return diopiSuccess;
+}
+
 diopiError_t diopiExp(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input) {
     DIOPI_ASCEND_CALL_ACLNN(aclnnExp, ctx, input, out);
     return diopiSuccess;

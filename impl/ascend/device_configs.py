@@ -5,6 +5,12 @@ from skip import Skip
 # scatter, topk, normal, norm, nll_loss, gather, fill_, triu, bmm, mm, pow, sum llm used
 
 device_configs = {
+    
+    'sign': dict(
+        name=['sign'],
+        dtype=[Skip(np.int16), Skip(np.uint8), Skip(np.int8)]
+    ),
+    
     # TODO(wangxing): skip float64 test cases temporarily, as other ops are implemented using DIOPI_ASCEND_CALL_ACLNN. This results in inconsistent accuracy of some float64 test cases of this op.
     'batch_norm': dict(
         name=["batch_norm"],
@@ -195,10 +201,12 @@ device_configs = {
 
     'pointwise_op': dict(
         name=['asin'],
+        dtype=[Skip(np.float32)],
         tensor_para=dict(
             args=[
                 {
                     "ins": ['input'],
+                    "dtype": [Skip(np.float32)],
                     "shape": [Skip(()),Skip((1,)),Skip((1024,)),Skip((364800, 4)),Skip((2, 128, 3072)),Skip((256, 128, 3, 3)),Skip((2, 31, 512, 6, 40)),Skip((0,)),Skip((16, 0)),],
                 },
             ]

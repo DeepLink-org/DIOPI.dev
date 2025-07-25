@@ -153,6 +153,8 @@ ascend:
 - diopiLog2
 - diopiLog2Inp
 - diopiLogInp
+- diopiLog1p
+- diopiLog1pInp
 - diopiLogSoftmax
 - diopiLogSoftmaxBackward
 - diopiLogicalAnd
