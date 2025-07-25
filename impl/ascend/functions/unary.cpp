@@ -99,6 +99,26 @@ diopiError_t diopiExpInp(diopiContextHandle_t ctx, diopiTensorHandle_t input) {
     return diopiSuccess;
 }
 
+diopiError_t diopiExp2(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnExp2, ctx, input, out);
+    return diopiSuccess;
+}
+
+diopiError_t diopiExp2Inp(diopiContextHandle_t ctx, diopiTensorHandle_t input) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnInplaceExp2, ctx, input);
+    return diopiSuccess;
+}
+
+diopiError_t diopiExpm1(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnExpm1, ctx, input, out);
+    return diopiSuccess;
+}
+
+diopiError_t diopiExpm1Inp(diopiContextHandle_t ctx, diopiTensorHandle_t input) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnInplaceExpm1, ctx, input);
+    return diopiSuccess;
+}
+
 diopiError_t diopiReciprocal(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input) {
     DIOPI_ASCEND_CALL_ACLNN(aclnnReciprocal, ctx, input, out);
     return diopiSuccess;

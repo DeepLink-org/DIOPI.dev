@@ -1307,6 +1307,25 @@ DIOPI_API diopiError_t diopiExpm1Inp(diopiContextHandle_t ctx, diopiTensorHandle
 DIOPI_API diopiError_t diopiExpm1(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input);
 
 /**
+ * @brief Computes 2 raised to the power of each element in the input tensor.
+ * @param[in] ctx Context environment.
+ * @param[in] input the input tensor. Supported types: [float16, float32, float64].
+ * @param[out] out the output tensor. 
+ *         Each element satisfies: out = 2^input. 
+ *         Type matches input: [float16, float32, float64].
+ */
+DIOPI_API diopiError_t diopiExp2(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input);
+
+ /**
+  * @brief Computes 2 raised to the power of each element in the input tensor (in-place operation).
+  * @param[in] ctx Context environment.
+  * @param[in,out] input the input tensor, and will be replaced by the result.
+  *         Supported types: [float16, float32, float64].
+  *         After operation, each element satisfies: input = 2^input.
+  */
+DIOPI_API diopiError_t diopiExp2Inp(diopiContextHandle_t ctx, diopiTensorHandle_t input);
+
+/**
  * @brief The in-place version of diopiLog().
  * @param[in] ctx Context environment.
  * @param[in] input the input tensor and will be stroed reuslt tensor. type = [float16, float32, float64, int16, int32, int64, uint8, int8].

@@ -1221,7 +1221,7 @@ diopi_configs = {
     ),
 
     'pointwise_op': dict(
-        name=['abs', 'cos', 'acos', 'tan', 'erf', 'erfinv', 'exp', 'expm1', 'floor',
+        name=['abs', 'cos', 'acos', 'tan', 'erf', 'erfinv', 'exp', 'exp2', 'expm1', 'floor',
               'neg', 'sin', 'asin', 'sqrt', 'logical_not', 'rsqrt', 'ceil', 'atan'],
         interface=['torch'],
         is_inplace=True,
@@ -1243,7 +1243,7 @@ diopi_configs = {
     'pointwise_op_int_without_inplace': dict(
         # name=['abs', 'cos', 'erf', 'erfinv', 'exp',
         #       'neg', 'sin', 'asin', 'sqrt', 'logical_not', 'rsqrt', 'atan'],
-        name=['abs', 'cos', 'acos', 'tan', 'erf', 'exp', 'expm1',
+        name=['abs', 'cos', 'acos', 'tan', 'erf', 'exp', 'exp2', 'expm1',
               'neg', 'sin', 'asin', 'sqrt', 'logical_not', 'rsqrt', 'atan'],
         interface=['torch'],
         dtype=[np.int16, np.int32, np.int64, np.int8],

@@ -97,6 +97,10 @@ ascend:
 - diopiErfinvInp
 - diopiExp
 - diopiExpInp
+- diopiExp2
+- diopiExp2Inp
+- diopiExpm1
+- diopiExpm1Inp
 - diopiExpand
 - diopiFill
 - diopiFlip

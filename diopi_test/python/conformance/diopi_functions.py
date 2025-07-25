@@ -443,6 +443,8 @@ def atanh(input, inplace=False) -> Tensor:
 def exp(input, inplace=False) -> Tensor:
     return unary_op(input, inplace, "diopiExp", promote_type(input, Dtype.float32))
 
+def exp2(input, inplace=False) -> Tensor:
+    return unary_op(input, inplace, "diopiExp2", promote_type(input, Dtype.float32))
 
 def expm1(input, inplace=False) -> Tensor:
     return unary_op(input, inplace, "diopiExpm1", promote_type(input, Dtype.float32))
