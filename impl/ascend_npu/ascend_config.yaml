@@ -64,6 +64,12 @@ ascend:
 - diopiCopyInp
 - diopiCos
 - diopiCosInp
+- diopiCosh
+- diopiCoshInp
+- diopiAcos
+- diopiAcosInp
+- diopiAcosh
+- diopiAcoshInp
 - diopiCrossEntropyLoss
 - diopiCrossEntropyLossBackward
 - diopiCustomizedFlashAttention
