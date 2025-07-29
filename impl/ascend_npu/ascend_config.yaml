@@ -18,6 +18,8 @@ ascend:
 - diopiApplyPenaltyV2
 - diopiArange
 - diopiArgmax
+- diopiArgmin
+- diopiRoll
 - diopiAtan
 - diopiAtanInp
 - diopiBaddbmm
@@ -58,6 +60,7 @@ ascend:
 - diopiClampMinScalar
 - diopiClampScalar
 - diopiCol2Im
+- diopiComplex
 - diopiContiguous
 - diopiConvolution2d
 - diopiConvolution2dBackward
@@ -125,6 +128,7 @@ ascend:
 - diopiHardtanh
 - diopiHardtanhBackward
 - diopiHardtanhInp
+- diopiIm2Col
 - diopiIndex
 - diopiIndexBackward
 - diopiIndexPut
@@ -143,6 +147,7 @@ ascend:
 - diopiLeakyReluInp
 - diopiLerpScalar
 - diopiLerpTensor
+- diopiLinalgQR
 - diopiLinalgVecNorm
 - diopiLinear
 - diopiLinearBackward
@@ -178,6 +183,7 @@ ascend:
 - diopiMatmul
 - diopiMatmulAllReduce
 - diopiMax
+- diopiAmax
 - diopiMaxAll
 - diopiMaxPool2d
 - diopiMaxPool2dBackward

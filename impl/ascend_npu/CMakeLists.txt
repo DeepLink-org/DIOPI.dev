@@ -162,6 +162,11 @@ set(OLD_IMPL_SRC
     ${OLD_IMPL_DIR}/functions/slice.cpp
     ${OLD_IMPL_DIR}/functions/unary.cpp
     ${OLD_IMPL_DIR}/functions/argmax.cpp
+    ${OLD_IMPL_DIR}/functions/argmin.cpp
+    ${OLD_IMPL_DIR}/functions/roll.cpp
+    ${OLD_IMPL_DIR}/functions/im2col.cpp
+    ${OLD_IMPL_DIR}/functions/complex.cpp
+    ${OLD_IMPL_DIR}/functions/linalgqr.cpp
     ${OLD_IMPL_DIR}/functions/clamp.cpp
     ${OLD_IMPL_DIR}/functions/dropout.cpp
     ${OLD_IMPL_DIR}/functions/arange.cpp
