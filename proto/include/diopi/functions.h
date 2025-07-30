@@ -2055,6 +2055,22 @@ DIOPI_API diopiError_t diopiBitwiseNot(diopiContextHandle_t ctx, diopiTensorHand
 DIOPI_API diopiError_t diopiBitwiseNotInp(diopiContextHandle_t ctx, diopiTensorHandle_t input);
 
 /**
+ * @brief Computes the bitwise Xor of input and other. The input tensor must be of integral or Boolean types. For bool tensors, it computes the logical Xor.
+ * @param[in] ctx Context environment.
+ * @param[in] input the first tensor. type = [int16, int32, int64, int8, uint8, bool].
+ * @param[in] other the second tesnor. type = [int16, int32, int64, int8, uint8, bool].
+ * @param[out] out the output tensor. type = [int16, int32, int64, int8, uint8, bool].
+ */
+DIOPI_API diopiError_t diopiBitwiseXor(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, diopiConstTensorHandle_t other);
+
+/**
+ * @brief The in-place version of diopiBitwiseXor().
+ * @param[in] input the input tensor and will be stored result tensor. type = [int16, int32, int64, int8, uint8, bool].
+ * @sa Other parameters refer to diopiBitwiseXor().
+ */
+DIOPI_API diopiError_t diopiBitwiseXorInp(diopiContextHandle_t ctx, diopiTensorHandle_t input, diopiConstTensorHandle_t other);
+
+/**
  * @brief Computes equal element-wise comparison with a scalar, "=".
  * @param[in] ctx Context environment.
  * @param[in] input the first tensor. type = [float64, float32, float16, int64, int32, int16, int8, uint8, bool].
@@ -4273,6 +4289,16 @@ DIOPI_API diopiError_t diopiLinalgQR(diopiContextHandle_t ctx, diopiConstTensorH
  * @param[out] out the output tensor. type = [float64, float32, float16, int16, int32, int64, int8, uint8]
  */
 DIOPI_API diopiError_t diopiAmax(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t self, diopiSize_t dim, bool keepdim);
+
+/**
+ * @brief Returns the minimum value of each slice of the input tensor in the given dimension(s) dim.
+ * @param[in] ctx Context environment.
+ * @param[in] self the input tensor. type = [float64, float32, float16, int16, int32, int64, int8, uint8]
+ * @param[in] dim (int or tuple of ints) – the dimension or dimensions to reduce.
+ * @param[in] keepdim whether the output tensor has dim retained or not.type = [bool].
+ * @param[out] out the output tensor. type = [float64, float32, float16, int16, int32, int64, int8, uint8]
+ */
+DIOPI_API diopiError_t diopiAmin(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t self, diopiSize_t dim, bool keepdim);
 
 // this contiguous func is temporary, please do not use.
 DIOPI_API diopiError_t diopiContiguous(diopiContextHandle_t ctx, diopiTensorHandle_t* out, diopiConstTensorHandle_t input, diopiMemoryFormat_t memoryFormat);

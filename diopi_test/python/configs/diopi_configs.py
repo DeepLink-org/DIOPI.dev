@@ -2114,7 +2114,7 @@ diopi_configs = {
     ),
 
     'bitwise_op': dict(
-        name=['bitwise_and', 'bitwise_or'],
+        name=['bitwise_and', 'bitwise_or', 'bitwise_xor'],
         interface=['torch'],
         is_inplace=True,
         tensor_para=dict(
@@ -8985,6 +8985,28 @@ diopi_configs = {
         name=['amax'],
         interface=['torch'],
         dtype=[np.float64, np.float32, np.float16, np.int16, np.int32, np.int64, np.int8, np.uint8, np.bool_],
+        para=dict(
+            dim=[None, -1, (0,), 1, 0, 2, (1, 2), (-1, 2, 0, -3), None, None, -2, (0,)],
+            keepdim=[False, True, True, False, False, False, True, False, False, True, False, True],
+        ),
+        tensor_para=dict(
+            gen_fn='Genfunc.randn',
+            args=[
+                {
+                    "ins": ['input'],
+                    "shape": ((), (), (18,), (1024, 64), (384, 128),
+                              (64, 1, 128), (128, 64, 3, 3),
+                              (2, 32, 130, 130), (128, 64, 32, 3), (384, 128),
+                              (3, 0), (4, 0, 5)),
+                },
+            ],
+        ),
+    ),
+    
+    'amin': dict(
+        name=['amin'],
+        interface=['torch'],
+        dtype=[np.float64, np.float32, np.float16, np.int16, np.int32, np.int64],
         para=dict(
             dim=[None, -1, (0,), 1, 0, 2, (1, 2), (-1, 2, 0, -3), None, None, -2, (0,)],
             keepdim=[False, True, True, False, False, False, True, False, False, True, False, True],

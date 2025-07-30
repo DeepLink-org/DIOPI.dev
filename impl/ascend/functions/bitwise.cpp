@@ -60,5 +60,15 @@ diopiError_t diopiBitwiseOrInpScalar(diopiContextHandle_t ctx, diopiTensorHandle
     return diopiSuccess;
 }
 
+diopiError_t diopiBitwiseXor(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t input, diopiConstTensorHandle_t other) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnBitwiseXorTensor, ctx, input, other, out);
+    return diopiSuccess;
+}
+
+diopiError_t diopiBitwiseXorInp(diopiContextHandle_t ctx, diopiTensorHandle_t input, diopiConstTensorHandle_t other) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnInplaceBitwiseXorTensor, ctx, input, other);
+    return diopiSuccess;
+}
+
 }  // namespace ascend
 }  // namespace impl

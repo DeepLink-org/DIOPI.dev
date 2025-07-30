@@ -78,8 +78,27 @@ def check_returncode(returncode, throw_exception=True):
         else:
             logger.info(error_info)
 
+visit = {}
 
+def finalize():
+    global visit
+    i = 1
+    all_op = []
+    for k, v in visit.items():
+        all_op.append(k)
+    all_op = sorted(all_op)
+    print(f"op number: {len(all_op)}")
+    print("op name:")
+    for k in all_op:
+        print(f"{k} ", end="")
+        if i%8 == 0:
+            print("")
+        i = i + 1
+        
 def check_function(fn_name):
+    global visit
+    if visit.get(fn_name, False) == False:
+        visit[fn_name] = True
     glob_vars.cur_test_func = fn_name
     if hasattr(diopilib, f"{fn_name}"):
         glob_vars.func_status[glob_vars.cur_test_func] = "passed"
@@ -4696,6 +4715,30 @@ def bitwise_or(input, other, inplace=False):
     return binary_op_scalar(input, other, inplace, "diopiBitwiseOr", dtype=out_dtype)
 
 
+def bitwise_xor(input, other, inplace=False):
+    assert input.get_dtype() in [
+        Dtype.bool,
+        Dtype.uint8,
+        Dtype.int8,
+        Dtype.int16,
+        Dtype.int32,
+        from_numpy_dtype(glob_vars.int_type),
+    ], "input tensor must be of integral or boolean"
+    if isinstance(other, Tensor):
+        assert other.get_dtype() in [
+            Dtype.bool,
+            Dtype.uint8,
+            Dtype.int8,
+            Dtype.int16,
+            Dtype.int32,
+            from_numpy_dtype(glob_vars.int_type),
+        ], "other tensor must be of integral or boolean"
+    else:
+        assert isinstance(other, int), "other must be of integral or boolean"
+    out_dtype = common_dtype(input, other)
+    return binary_op_scalar(input, other, inplace, "diopiBitwiseXor", dtype=out_dtype)
+
+
 def argmax(input, dim=None, keepdim=False):
     sizeO = list(input.size().data)
     if len(sizeO) > 0 and dim is not None:
@@ -6981,6 +7024,19 @@ def isnan(input) -> Tensor:
 
 def amax(input, dim, keepdim) -> Tensor:
     call = "diopiAmax"
+    func = check_function(call)
+    assert (
+        isinstance(dim, (int, list, tuple)) or dim is None
+    ), "dim should be int or list or tuple or None"
+    dim, out = reduce_op_process(input, dim, keepdim)
+    dim1 = Sizes(list(dim))
+    ret = func(input.context(), out, input, dim1, keepdim)
+    check_returncode(ret)
+    return out
+
+
+def amin(input, dim, keepdim) -> Tensor:
+    call = "diopiAmin"
     func = check_function(call)
     assert (
         isinstance(dim, (int, list, tuple)) or dim is None

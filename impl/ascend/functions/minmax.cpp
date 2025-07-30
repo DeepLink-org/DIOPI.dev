@@ -46,5 +46,10 @@ diopiError_t diopiAmax(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiC
     return diopiSuccess;
 }
 
+diopiError_t diopiAmin(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t self, diopiSize_t dim, bool keepdim) {
+    DIOPI_ASCEND_CALL_ACLNN(aclnnAmax, ctx, self, dim, keepdim, out);
+    return diopiSuccess;
+}
+
 }  // namespace ascend
 }  // namespace impl

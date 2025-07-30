@@ -9,7 +9,8 @@
 
 namespace impl {
 namespace ascend {
-    diopiError_t diopiComplex(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t real, diopiConstTensorHandle_t imag) {
+
+diopiError_t diopiComplex(diopiContextHandle_t ctx, diopiTensorHandle_t out, diopiConstTensorHandle_t real, diopiConstTensorHandle_t imag) {
     DIOPI_ASCEND_CALL_ACLNN(aclnnComplex, ctx, real, imag, out);
     return diopiSuccess;
 }
